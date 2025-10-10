@@ -35,9 +35,15 @@ class Administrador(Usuario):
 # /// DOMINIO CURSO ///
 
 
-class Curso(models.Model):  # <-- Corregido
+class Curso(models.Model):
     nombre = models.CharField(max_length=100)
-    semestre = models.PositiveIntegerField()  # Cambiado
+    semestre = models.PositiveIntegerField()
+    peso_parcial_1 = models.PositiveIntegerField()
+    peso_parcial_2 = models.PositiveIntegerField()
+    peso_parcial_3 = models.PositiveIntegerField()
+    peso_continua_1 = models.PositiveIntegerField()
+    peso_continua_2 = models.PositiveIntegerField()
+    peso_continua_3 = models.PositiveIntegerField()
 
     def __str__(self):
         return f"{self.nombre} - Semestre {self.semestre}"
@@ -85,6 +91,13 @@ class GrupoLaboratorio(models.Model):
     grupo_teoria = models.ForeignKey(
         GrupoTeoria, on_delete=models.CASCADE, related_name="grupos_laboratorio"
     )
+    cupos = models.IntegerField()
+    profesor = models.ForeignKey(
+        Profesor,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="grupos_laboratorio",
+    )
 
     def __str__(self):
         return f"{self.grupo_teoria.curso.nombre} - Lab"
@@ -131,3 +144,99 @@ class Nota(models.Model):
 
     def __str__(self):
         return f"{self.alumno.nombre} - {self.get_tipo_display()} ({self.periodo})"
+
+
+class Silabo(models.Model):
+    grupo_teoria = models.ForeignKey(
+        GrupoTeoria, on_delete=models.SET_NULL, null=True, related_name="silabos"
+    )
+    nombre = models.CharField(max_length=100)
+    archivo = models.FileField(upload_to="archivos/")
+
+
+class Examen(models.Model):
+    TIPOS = [
+        ("A", "Alta"),
+        ("P", "Promedio"),
+        ("B", "Baja"),
+    ]
+    alumno = models.ForeignKey(
+        Alumno, on_delete=models.CASCADE, related_name="examenes"
+    )
+    tipo = models.CharField(max_length=1, choices=TIPOS)
+    curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="examenes")
+
+
+class Tema(models.Model):
+    ESTADOS = [("H", "Hecho"), ("N", "No hecho")]
+    nombre = models.CharField(max_length=100)
+    silabo = models.ForeignKey(
+        Silabo, on_delete=models.SET_NULL, null=True, related_name="temas"
+    )
+    estado = models.CharField(max_length=1, choices=ESTADOS)
+    fecha = models.DateField()
+    grupo_teoria = models.ForeignKey(
+        GrupoTeoria, on_delete=models.SET_NULL, null=True, related_name="temas"
+    )
+
+
+class Asistencia(models.Model):
+    ESTADOS = [("P", "Presente"), ("F", "Falta")]
+    alumno = models.ForeignKey(
+        Alumno, on_delete=models.CASCADE, related_name="asistencias"
+    )
+    estado = models.CharField(max_length=1, choices=ESTADOS)
+    fecha = models.DateField()
+
+
+class Aula(models.Model):
+    nombre = models.CharField(max_length=100)
+
+
+class Reserva(models.Model):
+    profesor = models.ForeignKey(
+        Profesor, on_delete=models.CASCADE, related_name="reservas"
+    )
+    curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="reservas")
+
+
+class Hora(models.Model):
+    DIAS_SEMANA = [
+        ("L", "Lunes"),
+        ("M", "Martes"),
+        ("X", "Miércoles"),
+        ("J", "Jueves"),
+        ("V", "Viernes"),
+        ("S", "Sábado"),
+    ]
+
+    TIPOS_SESION = [
+        ("T", "Teoría"),
+        ("P", "Práctica"),
+        ("L", "Laboratorio"),
+        ("R", "Reserva"),
+    ]
+
+    dia = models.CharField(max_length=1, choices=DIAS_SEMANA)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    tipo = models.CharField(max_length=1, choices=TIPOS_SESION)
+    aula = models.ForeignKey(
+        Aula, on_delete=models.SET_NULL, null=True, related_name="horas"
+    )
+    grupo_teoria = models.ForeignKey(
+        GrupoTeoria, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    grupo_practica = models.ForeignKey(
+        GrupoPractica, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    grupo_laboratorio = models.ForeignKey(
+        GrupoLaboratorio, on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+    reserva = models.ForeignKey(
+        Reserva, on_delete=models.CASCADE, null=True, blank=True, related_name="horas"
+    )
+
+    def __str__(self):
+        return f"{self.get_dia_display()} {self.hora_inicio}-{self.hora_fin} ({self.get_tipo_display()})"
