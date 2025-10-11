@@ -17,6 +17,7 @@ class Usuario(models.Model):
 
 
 class Profesor(Usuario):
+    cantidad_reservas = models.IntegerField(default=2)
     pass
 
 
@@ -88,6 +89,7 @@ class GrupoPractica(models.Model):
 
 
 class GrupoLaboratorio(models.Model):
+    grupo = models.CharField(max_length=1)  # A B o C
     grupo_teoria = models.ForeignKey(
         GrupoTeoria, on_delete=models.CASCADE, related_name="grupos_laboratorio"
     )
@@ -151,7 +153,7 @@ class Silabo(models.Model):
         GrupoTeoria, on_delete=models.SET_NULL, null=True, related_name="silabos"
     )
     nombre = models.CharField(max_length=100)
-    archivo = models.FileField(upload_to="archivos/")
+    archivo = models.FileField(upload_to="archivos/Silabos")
 
 
 class Examen(models.Model):
@@ -164,7 +166,10 @@ class Examen(models.Model):
         Alumno, on_delete=models.CASCADE, related_name="examenes"
     )
     tipo = models.CharField(max_length=1, choices=TIPOS)
-    curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="examenes")
+    GrupoTeoria = models.ForeignKey(
+        GrupoTeoria, on_delete=models.CASCADE, related_name="examenes"
+    )
+    archivo = models.FileField(upload_to="archivos/Examenes")
 
 
 class Tema(models.Model):
@@ -178,15 +183,6 @@ class Tema(models.Model):
     grupo_teoria = models.ForeignKey(
         GrupoTeoria, on_delete=models.SET_NULL, null=True, related_name="temas"
     )
-
-
-class Asistencia(models.Model):
-    ESTADOS = [("P", "Presente"), ("F", "Falta")]
-    alumno = models.ForeignKey(
-        Alumno, on_delete=models.CASCADE, related_name="asistencias"
-    )
-    estado = models.CharField(max_length=1, choices=ESTADOS)
-    fecha = models.DateField()
 
 
 class Aula(models.Model):
@@ -240,3 +236,92 @@ class Hora(models.Model):
 
     def __str__(self):
         return f"{self.get_dia_display()} {self.hora_inicio}-{self.hora_fin} ({self.get_tipo_display()})"
+
+
+class AsistenciaProfesor(models.Model):
+    ESTADOS = [("P", "Presente"), ("F", "Falta")]
+
+    profesor = models.ForeignKey(
+        Profesor, on_delete=models.CASCADE, related_name="asistencias"
+    )
+    fecha = models.DateField()
+    estado = models.CharField(max_length=1, choices=ESTADOS)
+    hora = models.ForeignKey(
+        Hora, on_delete=models.SET_NULL, related_name="asistencias_profesores"
+    )
+    grupo_teoria = models.ForeignKey(
+        GrupoTeoria,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="asistencias_profesores",
+    )
+    grupo_practica = models.ForeignKey(
+        GrupoPractica,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="asistencias_profesores",
+    )
+    grupo_laboratorio = models.ForeignKey(
+        GrupoLaboratorio,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="asistencias_profesores",
+    )
+
+    reserva = models.ForeignKey(
+        Reserva,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="asistencias_profesores",
+    )
+
+    def __str__(self):
+        grupo = (
+            self.grupo_teoria
+            or self.grupo_practica
+            or self.grupo_laboratorio
+            or self.reserva
+        )
+        return f"{self.profesor.nombre} - {grupo} ({self.fecha})"
+
+
+class AsistenciaAlumno(models.Model):
+    ESTADOS = [("P", "Presente"), ("F", "Falta")]
+
+    alumno = models.ForeignKey(
+        Alumno, on_delete=models.CASCADE, related_name="asistencias"
+    )
+    fecha = models.DateField()
+    estado = models.CharField(max_length=1, choices=ESTADOS)
+    hora = models.ForeignKey(
+        Hora, on_delete=models.CASCADE, related_name="asistencias_alumnos"
+    )
+    grupo_teoria = models.ForeignKey(
+        GrupoTeoria,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="asistencias_alumnos",
+    )
+    grupo_practica = models.ForeignKey(
+        GrupoPractica,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="asistencias_alumnos",
+    )
+    grupo_laboratorio = models.ForeignKey(
+        GrupoLaboratorio,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="asistencias_alumnos",
+    )
+
+    def __str__(self):
+        grupo = self.grupo_teoria or self.grupo_practica or self.grupo_laboratorio
+        return f"{self.alumno.nombre} - {grupo} ({self.fecha})"
