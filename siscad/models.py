@@ -247,46 +247,8 @@ class AsistenciaProfesor(models.Model):
     fecha = models.DateField()
     estado = models.CharField(max_length=1, choices=ESTADOS)
     hora = models.ForeignKey(
-        Hora, on_delete=models.SET_NULL, related_name="asistencias_profesores"
+        Hora, on_delete=models.CASCADE, related_name="asistencias_profesores"
     )
-    grupo_teoria = models.ForeignKey(
-        GrupoTeoria,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="asistencias_profesores",
-    )
-    grupo_practica = models.ForeignKey(
-        GrupoPractica,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="asistencias_profesores",
-    )
-    grupo_laboratorio = models.ForeignKey(
-        GrupoLaboratorio,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="asistencias_profesores",
-    )
-
-    reserva = models.ForeignKey(
-        Reserva,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="asistencias_profesores",
-    )
-
-    def __str__(self):
-        grupo = (
-            self.grupo_teoria
-            or self.grupo_practica
-            or self.grupo_laboratorio
-            or self.reserva
-        )
-        return f"{self.profesor.nombre} - {grupo} ({self.fecha})"
 
 
 class AsistenciaAlumno(models.Model):
@@ -300,28 +262,3 @@ class AsistenciaAlumno(models.Model):
     hora = models.ForeignKey(
         Hora, on_delete=models.CASCADE, related_name="asistencias_alumnos"
     )
-    grupo_teoria = models.ForeignKey(
-        GrupoTeoria,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="asistencias_alumnos",
-    )
-    grupo_practica = models.ForeignKey(
-        GrupoPractica,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="asistencias_alumnos",
-    )
-    grupo_laboratorio = models.ForeignKey(
-        GrupoLaboratorio,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="asistencias_alumnos",
-    )
-
-    def __str__(self):
-        grupo = self.grupo_teoria or self.grupo_practica or self.grupo_laboratorio
-        return f"{self.alumno.nombre} - {grupo} ({self.fecha})"
