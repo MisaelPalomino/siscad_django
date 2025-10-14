@@ -7,6 +7,9 @@ from .models import (
     GrupoTeoria,
     GrupoPractica,
     GrupoLaboratorio,
+    Aula,
+    Reserva,
+    Silabo,
 )
 
 # ============ PROFESOR ==============
@@ -208,9 +211,11 @@ def EliminarGrupoPractica(grupo_practica_id):
         return True
     return False
 
-#================== Grupo Laboratorio ===============
 
-def CrearGrupoLaboratorio(grupo_teoria_id,profesor_id,grupo="A",cupos=20):
+# ================== Grupo Laboratorio ===============
+
+
+def CrearGrupoLaboratorio(grupo_teoria_id, profesor_id, grupo="A", cupos=20):
     grupo_teoria = None
     profesor = None
     if grupo_teoria_id:
@@ -220,8 +225,111 @@ def CrearGrupoLaboratorio(grupo_teoria_id,profesor_id,grupo="A",cupos=20):
     if not grupo_teoria:
         return None
     grupo_lab = GrupoLaboratorio.objects.create(
-        grupo_teoria=grupo_teoria,profesor=profesor,cupos = cupos, grupo=grupo
+        grupo_teoria=grupo_teoria, profesor=profesor, cupos=cupos, grupo=grupo
     )
     return grupo_lab
 
-def 
+
+def ObtenerGrupoLaboratiorioId(grupo_laboratorio_id):
+    try:
+        return GrupoLaboratorio.objects.get(id=grupo_laboratorio_id)
+    except GrupoLaboratorio.DoesNotExist:
+        return None
+
+
+def EliminarGrupoLaboratorio(grupo_laboratorio_id):
+    grupo_laboratorio = ObtenerGrupoLaboratiorioId(grupo_laboratorio_id)
+    if grupo_laboratorio:
+        grupo_laboratorio.delete()
+        return True
+    return False
+
+
+# ================= Aula =====================
+
+
+def CrearAula(nombre):
+    aula = Aula.objects.create(nombre=nombre)
+    return aula
+
+
+def ObtenerAulaId(aula_id):
+    try:
+        return Aula.objects.get(id=aula_id)
+    except Aula.DoesNotExist:
+        return None
+
+
+def EliminarAula(aula_id):
+    aula = ObtenerAulaId(aula_id)
+    if aula:
+        aula.delete()
+        return True
+    return False
+
+
+# ================= Reserva ===================
+
+
+def CrearReserva(curso_id, profesor_id):
+    curso = None
+    profesor = None
+    if curso_id:
+        curso = ObtenerCursoId(curso_id)
+    if profesor_id:
+        profesor = ObtenerProfesorId(profesor_id)
+
+    if not profesor:
+        return None
+    if not curso:
+        return None
+
+    reserva = Reserva.objects.create(curso=curso, profesor=profesor)
+    return reserva
+
+
+def ObtenerReservaId(reserva_id):
+    try:
+        return Reserva.objects.get(id=reserva_id)
+    except Reserva.DoesNotExist:
+        return None
+
+
+def EliminarReserva(reserva_id):
+    reserva = ObtenerReservaId(reserva_id)
+    if reserva:
+        reserva.delete()
+        return True
+    return False
+
+
+# ================ Silabo ==================0
+
+
+def CrearSilabo(grupo_teoria_id, nombre, archivo):
+    grupo_teoria = None
+    if grupo_teoria_id:
+        grupo_teoria = ObtenerGrupoTeoriaId(grupo_teoria_id)
+
+    if not grupo_teoria:
+        return None
+
+    silabo = Silabo.objects.create(
+        grupo_teoria=grupo_teoria, nombre=nombre, archivo=archivo
+    )
+    return silabo
+
+
+def ObtenerSilaboId(silabo_id):
+    try:
+        return Silabo.objects.get(id=silabo_id)
+    except Silabo.DoesNotExist:
+        return None
+
+
+def EliminarSilabo(silabo_id):
+    silabo = ObtenerSilaboId(silabo_id)
+    if silabo:
+        silabo.delete()
+        return True
+    return False
