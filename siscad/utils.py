@@ -671,12 +671,14 @@ def CrearAsistenciaAlumno(alumno_id, hora_id, fecha, estado="F"):
 
     return asistencia
 
+
 def ObtenerAsistenciaAlumnoId(asistencia_alumno_id):
     try:
         return AsistenciaAlumno.objects.get(id=asistencia_alumno_id)
     except AsistenciaAlumno.DoesNotExist:
         return None
-    
+
+
 def EliminarAsistenciaAlumno(asistencia_alumno_id):
     asistencia = ObtenerAsistenciaAlumnoId(asistencia_alumno_id)
     if asistencia:

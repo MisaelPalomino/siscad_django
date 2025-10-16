@@ -7,7 +7,7 @@ from django.db import models
 class Usuario(models.Model):
     nombre = models.CharField(max_length=100)
     email = models.EmailField(max_length=100)
-    dni = models.CharField(max_length=8)  # Cambiado: IntegerField no tiene max_digits
+    dni = models.CharField(max_length=8)  #
 
     def __str__(self):
         return f"{self.nombre} ({self.email})"
