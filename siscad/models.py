@@ -9,7 +9,7 @@ class Usuario(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     nombre = models.CharField(max_length=100)
     email = models.EmailField(max_length=100, unique=True)
-    dni = models.CharField(max_length=8)  
+    dni = models.CharField(max_length=8)
 
     def __str__(self):
         return f"{self.nombre} ({self.email})"
@@ -108,12 +108,19 @@ class GrupoLaboratorio(models.Model):
 
 
 class MatriculaCurso(models.Model):
+    TURNOS = [
+        ("A", "A"),
+        ("B", "B"),
+        ("C", "C"),
+    ]
     alumno = models.ForeignKey(
         Alumno, on_delete=models.CASCADE, related_name="matriculas_curso"
     )
     curso = models.ForeignKey(
         Curso, on_delete=models.CASCADE, related_name="matriculas_curso"
     )  # Corregido
+
+    turno = models.CharField(max_length=1, choices=TURNOS)
 
     def __str__(self):
         return f"{self.alumno.nombre} inscrito en {self.curso.nombre}"
@@ -145,6 +152,8 @@ class Nota(models.Model):
     periodo = models.PositiveIntegerField()
     peso = models.PositiveIntegerField()
     alumno = models.ForeignKey(Alumno, on_delete=models.CASCADE, related_name="notas")
+    curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="notas")
+    valor = models.FloatField(default=0)
 
     def __str__(self):
         return f"{self.alumno.nombre} - {self.get_tipo_display()} ({self.periodo})"
