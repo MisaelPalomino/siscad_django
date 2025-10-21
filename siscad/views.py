@@ -74,7 +74,6 @@ def insertar_alumnos_excel(request):
                 df = pd.read_excel(file)
                 df.columns = [str(col).strip().lower() for col in df.columns]
 
-                # Columnas requeridas
                 required_columns = [
                     "apellidop",
                     "apellidom",
@@ -119,7 +118,6 @@ def insertar_alumnos_excel(request):
                         dni = str(row["dni"]).strip() if pd.notna(row["dni"]) else ""
                         cui = str(row["cui"]).strip() if pd.notna(row["cui"]) else ""
 
-                        # Construir nombre completo
                         nombre = f"{apellidop} {apellidom} {nombres}".strip()
 
                         if not email:
@@ -133,14 +131,11 @@ def insertar_alumnos_excel(request):
                             defaults={"nombre": nombre, "dni": dni, "cui": cui},
                         )
 
-                        if created_flag:
-                            created += 1
-                        else:
-                            updated += 1
+                        created += 1 if created_flag else updated + 1
 
                 messages.success(
                     request,
-                    f" Importación completada. {created} alumnos creados, {updated} actualizados.",
+                    f"✅ Importación completada: {created} creados, {updated} actualizados.",
                 )
                 if errores:
                     for err in errores[:10]:
@@ -151,25 +146,39 @@ def insertar_alumnos_excel(request):
             except Exception as e:
                 messages.error(request, f"❌ Error leyendo el archivo: {e}")
                 return redirect("insertar_alumnos_excel")
+
     else:
         form = UploadExcelForm()
 
-    return render(request, "siscad/insertar_alumnos_excel.html", {"form": form})
+    alumnos = Alumno.objects.all()
+
+    return render(
+        request,
+        "siscad/insertar_alumnos_excel.html",
+        {"form": form, "alumnos": alumnos},
+    )
 
 
 def listar_alumno_grupo_teoria(request):
+    alumnos = []
+    cursos = (
+        Curso.objects.all()
+    )  
+
     if request.method == "POST":
         curso_id = request.POST.get("curso_nombre")
         turno = request.POST.get("curso_turno")
-    curso = utils.ObtenerCursoId(curso_id)
-    matriculas = MatriculaCurso.objects.filter(curso=curso, turno=turno)
-    datos = []
-    for matricula in matriculas:
-        alumno = matricula.alumno
-        datos.append({"alumnos": alumno})
+
+        curso = utils.ObtenerCursoId(curso_id)  
+        matriculas = MatriculaCurso.objects.filter(curso=curso, turno=turno)
+
+        for matricula in matriculas:
+            alumnos.append(matricula.alumno)
+
     return render(
-        "datos",
-        datos,
+        request,
+        "siscad/listar_alumnos_grupo_teoria.html",
+        {"alumnos": alumnos, "cursos": cursos},
     )
 
 

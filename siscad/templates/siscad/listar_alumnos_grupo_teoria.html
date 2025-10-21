@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Insertar Alumnos desde Excel</title>
+    <title>Listar Alumnos de Curso Teoría</title>
     <style>
         table,
         th,
@@ -13,7 +13,8 @@
         }
 
         #buscador {
-            margin-top: 20px;
+            margin-top: 10px;
+            margin-bottom: 10px;
             padding: 5px;
             width: 300px;
         }
@@ -25,17 +26,15 @@
             var tabla = document.getElementById("tablaAlumnos");
             var filas = tabla.getElementsByTagName("tr");
 
-            for (var i = 1; i < filas.length; i++) { // 1 para saltar el header
+            for (var i = 1; i < filas.length; i++) {
                 var celdas = filas[i].getElementsByTagName("td");
                 var coincide = false;
 
                 for (var j = 0; j < celdas.length; j++) {
-                    if (celdas[j]) {
-                        var texto = celdas[j].textContent || celdas[j].innerText;
-                        if (texto.toLowerCase().indexOf(filtro) > -1) {
-                            coincide = true;
-                            break;
-                        }
+                    var texto = celdas[j].textContent || celdas[j].innerText;
+                    if (texto.toLowerCase().includes(filtro)) {
+                        coincide = true;
+                        break;
                     }
                 }
                 filas[i].style.display = coincide ? "" : "none";
@@ -45,25 +44,33 @@
 </head>
 
 <body>
-    <h1>Subir archivo Excel</h1>
+    <h1>Seleccionar Curso y Turno</h1>
 
-    <form method="POST" enctype="multipart/form-data">
+    <!-- Formulario para seleccionar curso y turno -->
+    <form method="POST">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Cargar</button>
-    </form>
+        <label>Curso:</label>
+        <select name="curso_nombre" required>
+            <option value="">--Seleccione un curso--</option>
+            {% for curso in cursos %}
+            <option value="{{ curso.id }}">{{ curso.nombre }}</option>
+            {% endfor %}
+        </select>
 
-    {% if messages %}
-    <ul>
-        {% for message in messages %}
-        <li>{{ message }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
+        <label>Turno:</label>
+        <select name="curso_turno" required>
+            <option value="mañana">Mañana</option>
+            <option value="tarde">Tarde</option>
+            <option value="noche">Noche</option>
+        </select>
+
+        <button type="submit">Buscar</button>
+    </form>
 
     <hr>
 
-    <h2>📋 Lista de Alumnos Registrados</h2>
+    {% if alumnos %}
+    <h2>Alumnos Matriculados</h2>
     <input type="text" id="buscador" placeholder="Buscar alumno..." onkeyup="filtrarTabla()">
 
     <table id="tablaAlumnos">
@@ -83,13 +90,12 @@
                 <td>{{ alumno.dni }}</td>
                 <td>{{ alumno.cui }}</td>
             </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4">No hay alumnos registrados.</td>
-            </tr>
             {% endfor %}
         </tbody>
     </table>
+    {% else %}
+    <p>No hay alumnos matriculados o no se ha realizado búsqueda.</p>
+    {% endif %}
 </body>
 
 </html>

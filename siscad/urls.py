@@ -8,4 +8,7 @@ urlpatterns = [
     path(
         "insertar-alumnos/", views.insertar_alumnos_excel, name="insertar_alumnos_excel"
     ),
+    path(
+        "listar-alumnos-grupo-teoria/", views.listar_alumno_grupo_teoria, name="listar_alumnos_grupo_teoria"
+    ),
 ]
