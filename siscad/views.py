@@ -11,6 +11,7 @@ from .models import (
     Nota,
     Curso,
     MatriculaCurso,
+    GrupoTeoria,
 )
 import pandas as pd
 
@@ -161,25 +162,28 @@ def insertar_alumnos_excel(request):
 
 def listar_alumno_grupo_teoria(request):
     alumnos = []
-    cursos = (
-        Curso.objects.all()
-    )  
+    cursos = Curso.objects.all()
+    turnos = []
 
     if request.method == "POST":
         curso_id = request.POST.get("curso_nombre")
         turno = request.POST.get("curso_turno")
+        
+        # Obtener los turnos disponibles para ese curso
+        turnos = GrupoTeoria.objects.filter(curso_id=curso_id).values_list('turno', flat=True).distinct()
 
-        curso = utils.ObtenerCursoId(curso_id)  
-        matriculas = MatriculaCurso.objects.filter(curso=curso, turno=turno)
+        # Filtrar alumnos
+        matriculas = MatriculaCurso.objects.filter(curso_id=curso_id, turno=turno)
+        alumnos = [matricula.alumno for matricula in matriculas]
+    else:
+        # Si no se ha enviado POST, turnos vacío
+        turnos = []
 
-        for matricula in matriculas:
-            alumnos.append(matricula.alumno)
-
-    return render(
-        request,
-        "siscad/listar_alumnos_grupo_teoria.html",
-        {"alumnos": alumnos, "cursos": cursos},
-    )
+    return render(request, "siscad/listar_alumnos_grupo_teoria.html", {
+        "alumnos": alumnos,
+        "cursos": cursos,
+        "turnos": turnos
+    })
 
 
 def listar_grupos_laboratorio(request):

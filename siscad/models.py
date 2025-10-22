@@ -41,6 +41,8 @@ class Administrador(Usuario):
 class Curso(models.Model):
     nombre = models.CharField(max_length=100)
     semestre = models.PositiveIntegerField()
+    codigo = models.PositiveIntegerField(null=True)
+    prerequisito_codigo = models.PositiveIntegerField(null=True)
     peso_parcial_1 = models.PositiveIntegerField()
     peso_parcial_2 = models.PositiveIntegerField()
     peso_parcial_3 = models.PositiveIntegerField()

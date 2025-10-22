@@ -1,17 +1,13 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <title>Listar Alumnos de Curso Teoría</title>
     <style>
-        table,
-        th,
-        td {
+        table, th, td {
             border: 1px solid black;
             border-collapse: collapse;
             padding: 5px;
         }
-
         #buscador {
             margin-top: 10px;
             margin-bottom: 10px;
@@ -23,48 +19,48 @@
         function filtrarTabla() {
             var input = document.getElementById("buscador");
             var filtro = input.value.toLowerCase();
-            var tabla = document.getElementById("tablaAlumnos");
-            var filas = tabla.getElementsByTagName("tr");
+            var filas = document.getElementById("tablaAlumnos").getElementsByTagName("tr");
 
             for (var i = 1; i < filas.length; i++) {
                 var celdas = filas[i].getElementsByTagName("td");
-                var coincide = false;
+                var mostrar = false;
 
                 for (var j = 0; j < celdas.length; j++) {
                     var texto = celdas[j].textContent || celdas[j].innerText;
-                    if (texto.toLowerCase().includes(filtro)) {
-                        coincide = true;
+                    if (texto.toLowerCase().indexOf(filtro) > -1) {
+                        mostrar = true;
                         break;
                     }
                 }
-                filas[i].style.display = coincide ? "" : "none";
+                filas[i].style.display = mostrar ? "" : "none";
             }
         }
     </script>
 </head>
-
 <body>
     <h1>Seleccionar Curso y Turno</h1>
 
-    <!-- Formulario para seleccionar curso y turno -->
     <form method="POST">
         {% csrf_token %}
+        <!-- Selección de curso -->
         <label>Curso:</label>
-        <select name="curso_nombre" required>
+        <select name="curso_nombre" onchange="this.form.submit()">
             <option value="">--Seleccione un curso--</option>
             {% for curso in cursos %}
-            <option value="{{ curso.id }}">{{ curso.nombre }}</option>
+            <option value="{{ curso.id }}" {% if curso.id|stringformat:"s" == request.POST.curso_nombre %}selected{% endif %}>{{ curso.nombre }}</option>
             {% endfor %}
         </select>
 
+        <!-- Selección de turno -->
+        {% if turnos %}
         <label>Turno:</label>
-        <select name="curso_turno" required>
-            <option value="mañana">Mañana</option>
-            <option value="tarde">Tarde</option>
-            <option value="noche">Noche</option>
+        <select name="curso_turno">
+            {% for t in turnos %}
+            <option value="{{ t }}" {% if t == request.POST.curso_turno %}selected{% endif %}>{{ t }}</option>
+            {% endfor %}
         </select>
-
         <button type="submit">Buscar</button>
+        {% endif %}
     </form>
 
     <hr>
@@ -94,8 +90,9 @@
         </tbody>
     </table>
     {% else %}
-    <p>No hay alumnos matriculados o no se ha realizado búsqueda.</p>
+        {% if request.method == "POST" %}
+        <p>No hay alumnos matriculados para este curso y turno.</p>
+        {% endif %}
     {% endif %}
 </body>
-
 </html>
