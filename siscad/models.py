@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+import random
 
 # /// DOMINIO USUARIO ///
 
@@ -30,6 +30,18 @@ class Secretaria(Usuario):
 class Alumno(Usuario):
     cui = models.CharField(max_length=8)  # Cambiado
 
+    def calcular_semestre(self):
+        try:
+            ano_ingreso = int(self.cui[:4])
+            ano_actual = 2025
+
+            semestre = (ano_actual - ano_ingreso) * 2
+            if semestre > 10 or semestre <= 0:
+                semestre = random.choice([2, 4, 6, 8, 10])
+            return semestre
+        except ValueError:
+            return None
+
 
 class Administrador(Usuario):
     pass
@@ -43,7 +55,6 @@ class Curso(models.Model):
     nombre = models.CharField(max_length=100)
     semestre = models.IntegerField()
     prerequisito_codigo = models.PositiveIntegerField(null=True, blank=True)
-
 
     peso_parcial_1 = models.IntegerField(default=0)
     peso_parcial_2 = models.IntegerField(default=0)

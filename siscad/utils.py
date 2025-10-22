@@ -3,7 +3,6 @@ from django.db import transaction
 from .models import Alumno, Curso
 from pathlib import Path
 
-
 def insertar_alumnos_excel(path_excel):
     """
     Inserta alumnos desde un archivo Excel usando el ORM de Django.
