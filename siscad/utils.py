@@ -176,3 +176,43 @@ def insertar_cursos_excel(path_excel):
         print(" Errores encontrados:")
         for err in errores:
             print(f"   - {err}")
+
+
+def insertar_aula_excel():
+    pass
+
+
+def insertar_matriculas_curso():
+    pass
+
+
+def insertar_grupos_teoria():
+    pass
+
+
+def insertar_grupos_practica():
+    pass
+
+
+def insertar_notas():
+    pass
+
+
+def insertar_grupos_laboratorio():
+    pass
+
+
+def insertar_matriculas_laboratorios():
+    pass
+
+
+def insertar_horas():
+    pass
+
+
+def insertar_asistencia_profesor():
+    pass
+
+
+def insertar_asistencia_alumno():
+    pass
