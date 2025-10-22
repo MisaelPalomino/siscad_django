@@ -39,19 +39,22 @@ class Administrador(Usuario):
 
 
 class Curso(models.Model):
+    codigo = models.PositiveIntegerField(null=True, blank=True)
     nombre = models.CharField(max_length=100)
-    semestre = models.PositiveIntegerField()
-    codigo = models.PositiveIntegerField(null=True)
-    prerequisito_codigo = models.PositiveIntegerField(null=True)
-    peso_parcial_1 = models.PositiveIntegerField()
-    peso_parcial_2 = models.PositiveIntegerField()
-    peso_parcial_3 = models.PositiveIntegerField()
-    peso_continua_1 = models.PositiveIntegerField()
-    peso_continua_2 = models.PositiveIntegerField()
-    peso_continua_3 = models.PositiveIntegerField()
+    semestre = models.IntegerField()
+    prerequisito_codigo = models.PositiveIntegerField(null=True, blank=True)
+
+
+    peso_parcial_1 = models.IntegerField(default=0)
+    peso_parcial_2 = models.IntegerField(default=0)
+    peso_parcial_3 = models.IntegerField(default=0)
+
+    peso_continua_1 = models.IntegerField(default=0)
+    peso_continua_2 = models.IntegerField(default=0)
+    peso_continua_3 = models.IntegerField(default=0)
 
     def __str__(self):
-        return f"{self.nombre} - Semestre {self.semestre}"
+        return self.nombre
 
 
 class GrupoTeoria(models.Model):
