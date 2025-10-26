@@ -17,4 +17,9 @@ urlpatterns = [
         views.listar_alumno_grupo_teoria,
         name="listar_alumnos_grupo_teoria",
     ),
+    path(
+        "secretaria/listar-grupos-laboratorio/",
+        views.listar_grupos_laboratorio,
+        name="listar_grupos_laboratorio",
+    ),
 ]

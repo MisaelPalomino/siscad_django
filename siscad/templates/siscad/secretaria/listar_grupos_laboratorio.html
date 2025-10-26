@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Laboratorios Disponibles</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 5px;
+        }
+        input[type="number"] {
+            width: 60px;
+        }
+        button {
+            padding: 4px 8px;
+            margin: 2px;
+        }
+        .mensaje {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Laboratorios Disponibles</h1>
+
+    {% if messages %}
+        <ul>
+        {% for message in messages %}
+            <li class="{% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+
+    <!-- Botón para descargar Excel -->
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit" name="descargar_excel">Descargar Excel</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Curso</th>
+                <th>Grupo Teoría</th>
+                <th>Grupo Laboratorio</th>
+                <th>Profesor</th>
+                <th>Cupos</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lab in laboratorios %}
+            <tr>
+                <td>{{ lab.grupo_teoria.curso.nombre }}</td>
+                <td>{{ lab.grupo_teoria.turno }}</td>
+                <td>{{ lab.grupo }}</td>
+                <td>
+                    {% if lab.profesor %}
+                        {{ lab.profesor.nombre }}
+                    {% else %}
+                        Sin asignar
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="POST" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="lab_id" value="{{ lab.id }}">
+                        <input type="number" name="cupos" value="{{ lab.cupos }}" min="0">
+                </td>
+                <td>
+                        <button type="submit" name="actualizar_cupos">Actualizar</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
