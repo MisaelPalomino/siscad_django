@@ -1,0 +1,8 @@
+Django>=5.0
+mysqlclient
+pandas
+openpyxl
+django-extensions
+pydot
+graphviz
+python-dotenv

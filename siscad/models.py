@@ -33,7 +33,7 @@ class Alumno(Usuario):
     def calcular_semestre(self):
         try:
             ano_ingreso = int(self.cui[:4])
-            ano_actual = 2025
+            ano_actual = 2026
 
             semestre = (ano_actual - ano_ingreso) * 2
             if semestre > 10 or semestre <= 0:
@@ -169,7 +169,7 @@ class Nota(models.Model):
     peso = models.PositiveIntegerField()
     alumno = models.ForeignKey(Alumno, on_delete=models.CASCADE, related_name="notas")
     curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="notas")
-    valor = models.FloatField(default=0)
+    valor = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.alumno.nombre} - {self.get_tipo_display()} ({self.periodo})"

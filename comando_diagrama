@@ -3,4 +3,8 @@ source venv/bin/activate
 python manage.py runserver
 mysql -u root -p
 python manage.py makemigrations siscad
+python manage.py migrate
 from siscad.utils import *
+//////////////////////////Eliminar data ///////////////////////////
+DROP DATABASE sistema_db;
+CREATE DATABASE sistema_db CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;

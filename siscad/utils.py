@@ -1,6 +1,15 @@
 import pandas as pd
 from django.db import transaction
-from .models import Alumno, Curso, MatriculaCurso, Profesor, Aula, GrupoTeoria
+from .models import (
+    Alumno,
+    Curso,
+    MatriculaCurso,
+    Profesor,
+    Aula,
+    GrupoTeoria,
+    GrupoPractica,
+    Nota,
+)
 from pathlib import Path
 
 
@@ -358,7 +367,7 @@ def insertar_grupos_teoria():
         print("❌ No hay profesores disponibles en la base de datos.")
         return
 
-    profesor_idx = 0  
+    profesor_idx = 0
     created = 0
     existing = 0
 
@@ -372,16 +381,20 @@ def insertar_grupos_teoria():
             grupo, created_flag = GrupoTeoria.objects.get_or_create(
                 curso=curso,
                 turno=turno,
-                defaults={"profesor": profesores[profesor_idx]}
+                defaults={"profesor": profesores[profesor_idx]},
             )
 
             if created_flag:
                 created += 1
-                print(f"✅ Grupo creado: {curso.nombre} - Turno {turno} → Profesor: {profesores[profesor_idx].nombre}")
-                profesor_idx = (profesor_idx + 1) % len(profesores)  
+                print(
+                    f"✅ Grupo creado: {curso.nombre} - Turno {turno} → Profesor: {profesores[profesor_idx].nombre}"
+                )
+                profesor_idx = (profesor_idx + 1) % len(profesores)
             else:
                 existing += 1
-                print(f"ℹ️ Grupo ya existía: {curso.nombre} - Turno {turno}. Profesor actual: {grupo.profesor.nombre if grupo.profesor else 'Sin profesor'}")
+                print(
+                    f"ℹ️ Grupo ya existía: {curso.nombre} - Turno {turno}. Profesor actual: {grupo.profesor.nombre if grupo.profesor else 'Sin profesor'}"
+                )
 
     print("\n📊 Resumen final:")
     print(f"   ➕ {created} grupos creados")
@@ -389,11 +402,100 @@ def insertar_grupos_teoria():
 
 
 def insertar_grupos_practica():
-    pass
+    """
+    Crea un grupo de práctica por cada grupo de teoría,
+    manteniendo el mismo turno y profesor.
+    Si ya existe, no lo vuelve a crear.
+    """
+    grupos_teoria = GrupoTeoria.objects.all()
+    creados = 0
+    omitidos = 0
+
+    with transaction.atomic():
+        for gt in grupos_teoria:
+            # Verificar si ya existe un grupo de práctica con mismo grupo_teoria y turno
+            existe = GrupoPractica.objects.filter(
+                grupo_teoria=gt, turno=gt.turno
+            ).first()
+
+            if existe:
+                omitidos += 1
+                continue
+
+            GrupoPractica.objects.create(
+                grupo_teoria=gt,
+                profesor=gt.profesor,  # Mismo profesor que teoría
+                turno=gt.turno,  # Mismo turno que teoría
+            )
+            creados += 1
+
+    print(f"✅ Grupos de práctica creados: {creados}")
+    print(f"ℹ️ Grupos ya existentes omitidos: {omitidos}")
 
 
 def insertar_notas():
-    pass
+    matriculas = MatriculaCurso.objects.select_related("curso", "alumno")
+    notas_a_crear = []
+
+    for matricula in matriculas:
+        curso = matricula.curso
+        alumno = matricula.alumno
+
+        # Notas Parciales (tipo "P")
+        parciales = [
+            (1, curso.peso_parcial_1),
+            (2, curso.peso_parcial_2),
+            (3, curso.peso_parcial_3),
+        ]
+
+        # Notas Continuas (tipo "C")
+        continuas = [
+            (1, curso.peso_continua_1),
+            (2, curso.peso_continua_2),
+            (3, curso.peso_continua_3),
+        ]
+
+        # Crear notas si no existen
+        for periodo, peso in parciales:
+            if (
+                peso > 0
+                and not Nota.objects.filter(
+                    alumno=alumno, curso=curso, tipo="P", periodo=periodo
+                ).exists()
+            ):
+                notas_a_crear.append(
+                    Nota(
+                        tipo="P",
+                        periodo=periodo,
+                        peso=peso,
+                        alumno=alumno,
+                        curso=curso,
+                        valor=None,  # Nota aún no registrada
+                    )
+                )
+
+        for periodo, peso in continuas:
+            if (
+                peso > 0
+                and not Nota.objects.filter(
+                    alumno=alumno, curso=curso, tipo="C", periodo=periodo
+                ).exists()
+            ):
+                notas_a_crear.append(
+                    Nota(
+                        tipo="C",
+                        periodo=periodo,
+                        peso=peso,
+                        alumno=alumno,
+                        curso=curso,
+                        valor=None,  # Nota aún no registrada
+                    )
+                )
+
+    with transaction.atomic():
+        Nota.objects.bulk_create(notas_a_crear, batch_size=500)
+
+    print(f"✅ {len(notas_a_crear)} notas generadas exitosamente.")
 
 
 def insertar_grupos_laboratorio():
@@ -413,4 +515,18 @@ def insertar_asistencia_profesor():
 
 
 def insertar_asistencia_alumno():
+    pass
+
+
+def insertar_data_excel():
+    insertar_alumnos_excel("siscad/datos/Alumnos.xlsx")
+    insertar_profesores_excel("siscad/datos/TablaProfesores.xlsx")
+    insertar_aulas_excel("siscad/datos/TablaAulas.xlsx")
+    insertar_cursos_excel("siscad/datos/TablaCursos.xlsx")
+
+def generar_data():
+    insertar_matriculas_curso()
+    insertar_grupos_teoria()
+    insertar_grupos_practica()
+    insertar_notas()
     pass
