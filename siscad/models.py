@@ -1,8 +1,24 @@
 from django.db import models
 from django.contrib.auth.models import User
+from collections import defaultdict
 import random
 
+SEMESTRES_OBJETIVO = [2, 4, 6, 8, 10]
+MAX_POR_SEMESTRE = 80
+capacidad_por_semestre = defaultdict(int)
+
 # /// DOMINIO USUARIO ///
+
+
+def inicializar_capacidades():
+    from .models import Alumno
+
+    global capacidad_por_semestre
+
+    for sem in SEMESTRES_OBJETIVO:
+        capacidad_por_semestre[sem] = Alumno.objects.filter(
+            semestre_asignado=sem
+        ).count()
 
 
 class Usuario(models.Model):
@@ -28,7 +44,8 @@ class Secretaria(Usuario):
 
 
 class Alumno(Usuario):
-    cui = models.CharField(max_length=8)  # Cambiado
+    cui = models.CharField(max_length=8)
+    semestre_asignado = models.IntegerField(null=True, blank=True)
 
     def calcular_semestre(self):
         try:
@@ -36,9 +53,30 @@ class Alumno(Usuario):
             ano_actual = 2026
 
             semestre = (ano_actual - ano_ingreso) * 2
+
             if semestre > 10 or semestre <= 0:
-                semestre = random.choice([2, 4, 6, 8, 10])
+                from .models import (
+                    capacidad_por_semestre,
+                    SEMESTRES_OBJETIVO,
+                    MAX_POR_SEMESTRE,
+                    inicializar_capacidades,
+                )
+
+                if sum(capacidad_por_semestre.values()) == 0:
+                    inicializar_capacidades()
+
+                for sem in SEMESTRES_OBJETIVO:
+                    if capacidad_por_semestre[sem] < MAX_POR_SEMESTRE:
+                        capacidad_por_semestre[sem] += 1
+                        self.semestre_asignado = sem
+                        return sem
+
+                sem = random.choice(SEMESTRES_OBJETIVO)
+                self.semestre_asignado = sem
+                return sem
+            self.semestre_asignado = semestre
             return semestre
+
         except ValueError:
             return None
 

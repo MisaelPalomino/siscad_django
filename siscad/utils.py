@@ -9,6 +9,7 @@ from .models import (
     GrupoTeoria,
     GrupoPractica,
     Nota,
+    GrupoLaboratorio,
 )
 from pathlib import Path
 
@@ -499,7 +500,56 @@ def insertar_notas():
 
 
 def insertar_grupos_laboratorio():
-    pass
+    from django.db import transaction
+
+    laboratorios_a_crear = []
+
+    secuencia_turnos = {
+        "A": ["A", "C"], 
+        "B": ["B", "D"],
+        "C": ["E", "F"],
+    }
+
+    grupos_teoria = GrupoTeoria.objects.all()
+
+    for gt in grupos_teoria:
+        turno = gt.turno
+        profesor = gt.profesor 
+
+       
+        total_alumnos = MatriculaCurso.objects.filter(
+            curso=gt.curso, turno=turno
+        ).count()
+
+        if total_alumnos == 0:
+            continue  
+      
+        num_labs = (
+            total_alumnos + 19
+        ) // 20 
+
+        for i in range(num_labs):
+            if i < len(secuencia_turnos[turno]):
+                lab_turno = secuencia_turnos[turno][i]
+            else:
+                lab_turno = chr(
+                    ord(secuencia_turnos[turno][-1])
+                    + (i - len(secuencia_turnos[turno]) + 1) * 2
+                )
+
+            laboratorios_a_crear.append(
+                GrupoLaboratorio(
+                    grupo=lab_turno,
+                    grupo_teoria=gt,
+                    cupos=20,  
+                    profesor=profesor,
+                )
+            )
+
+    with transaction.atomic():
+        GrupoLaboratorio.objects.bulk_create(laboratorios_a_crear, batch_size=200)
+
+    print(f" Laboratorios generados correctamente: {len(laboratorios_a_crear)}")
 
 
 def insertar_matriculas_laboratorios():
@@ -523,6 +573,7 @@ def insertar_data_excel():
     insertar_profesores_excel("siscad/datos/TablaProfesores.xlsx")
     insertar_aulas_excel("siscad/datos/TablaAulas.xlsx")
     insertar_cursos_excel("siscad/datos/TablaCursos.xlsx")
+
 
 def generar_data():
     insertar_matriculas_curso()
