@@ -3,3 +3,4 @@ source venv/bin/activate
 python manage.py runserver
 mysql -u root -p
 python manage.py makemigrations siscad
+from siscad.utils import *

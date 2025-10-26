@@ -214,6 +214,7 @@ class Tema(models.Model):
 
 class Aula(models.Model):
     nombre = models.CharField(max_length=100)
+    tipo = models.CharField(max_length=4)
 
 
 class Reserva(models.Model):
