@@ -1,95 +1,98 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+  <head>
     <title>Insertar Alumnos desde Excel</title>
     <style>
-        table,
-        th,
-        td {
-            border: 1px solid black;
-            border-collapse: collapse;
-            padding: 5px;
-        }
+      table,
+      th,
+      td {
+        border: 1px solid black;
+        border-collapse: collapse;
+        padding: 5px;
+      }
 
-        #buscador {
-            margin-top: 20px;
-            padding: 5px;
-            width: 300px;
-        }
+      #buscador {
+        margin-top: 20px;
+        padding: 5px;
+        width: 300px;
+      }
     </style>
     <script>
-        function filtrarTabla() {
-            var input = document.getElementById("buscador");
-            var filtro = input.value.toLowerCase();
-            var tabla = document.getElementById("tablaAlumnos");
-            var filas = tabla.getElementsByTagName("tr");
+      function filtrarTabla() {
+        var input = document.getElementById("buscador");
+        var filtro = input.value.toLowerCase();
+        var tabla = document.getElementById("tablaAlumnos");
+        var filas = tabla.getElementsByTagName("tr");
 
-            for (var i = 1; i < filas.length; i++) { // 1 para saltar el header
-                var celdas = filas[i].getElementsByTagName("td");
-                var coincide = false;
+        for (var i = 1; i < filas.length; i++) {
+          // 1 para saltar el header
+          var celdas = filas[i].getElementsByTagName("td");
+          var coincide = false;
 
-                for (var j = 0; j < celdas.length; j++) {
-                    if (celdas[j]) {
-                        var texto = celdas[j].textContent || celdas[j].innerText;
-                        if (texto.toLowerCase().indexOf(filtro) > -1) {
-                            coincide = true;
-                            break;
-                        }
-                    }
-                }
-                filas[i].style.display = coincide ? "" : "none";
+          for (var j = 0; j < celdas.length; j++) {
+            if (celdas[j]) {
+              var texto = celdas[j].textContent || celdas[j].innerText;
+              if (texto.toLowerCase().indexOf(filtro) > -1) {
+                coincide = true;
+                break;
+              }
             }
+          }
+          filas[i].style.display = coincide ? "" : "none";
         }
+      }
     </script>
-</head>
+  </head>
 
-<body>
+  <body>
     <h1>Subir archivo Excel</h1>
 
     <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Cargar</button>
+      {% csrf_token %} {{ form.as_p }}
+      <button type="submit">Cargar</button>
     </form>
 
     {% if messages %}
     <ul>
-        {% for message in messages %}
-        <li>{{ message }}</li>
-        {% endfor %}
+      {% for message in messages %}
+      <li>{{ message }}</li>
+      {% endfor %}
     </ul>
     {% endif %}
 
-    <hr>
+    <hr />
 
     <h2>📋 Lista de Alumnos Registrados</h2>
-    <input type="text" id="buscador" placeholder="Buscar alumno..." onkeyup="filtrarTabla()">
+    <input
+      type="text"
+      id="buscador"
+      placeholder="Buscar alumno..."
+      onkeyup="filtrarTabla()"
+    />
 
     <table id="tablaAlumnos">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>DNI</th>
-                <th>CUI</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for alumno in alumnos %}
-            <tr>
-                <td>{{ alumno.nombre }}</td>
-                <td>{{ alumno.email }}</td>
-                <td>{{ alumno.dni }}</td>
-                <td>{{ alumno.cui }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4">No hay alumnos registrados.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>DNI</th>
+          <th>CUI</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for alumno in alumnos %}
+        <tr>
+          <td>{{ alumno.nombre }}</td>
+          <td>{{ alumno.email }}</td>
+          <td>{{ alumno.dni }}</td>
+          <td>{{ alumno.cui }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4">No hay alumnos registrados.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
     </table>
-</body>
-
+  </body>
 </html>

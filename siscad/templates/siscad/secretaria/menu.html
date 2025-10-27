@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Menú Secretaría</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f9f9f9;
+        padding: 20px;
+      }
+      h1 {
+        color: #333;
+      }
+      .menu {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        max-width: 400px;
+        margin: auto;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .menu a {
+        display: block;
+        margin: 10px 0;
+        padding: 10px;
+        text-decoration: none;
+        background: #007bff;
+        color: white;
+        text-align: center;
+        border-radius: 5px;
+      }
+      .menu a:hover {
+        background: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="menu">
+      <h1>Panel de Secretaría</h1>
+      <a href="{% url 'insertar_alumnos_excel' %}">
+        Insertar Alumnos desde Excel</a
+      >
+      <a href="{% url 'listar_alumnos_grupo_teoria' %}">
+        Listar Alumnos por Grupo de Teoría</a
+      >
+      <a href="{% url 'listar_grupos_laboratorio' %}">
+        Gestión de Laboratorios</a
+      >
+      <a href="{% url 'listar_alumnos_grupo_laboratorio' %}">
+        Listar Alumnos por Laboratorio</a
+      >
+      <a href="{% url 'logout' %}"> Cerrar sesión</a>
+    </div>
+  </body>
+</html>

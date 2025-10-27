@@ -8,3 +8,11 @@ from siscad.utils import *
 //////////////////////////Eliminar data ///////////////////////////
 DROP DATABASE sistema_db;
 CREATE DATABASE sistema_db CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
+INSERT INTO auth_user (username, password, email, is_staff, is_superuser, is_active, date_joined)
+VALUES ('secretaria1', 
+'pbkdf2_sha256$600000$qUg2NBA8JUWn6D9gCrvNZK$LruGmU4GJMttiNenSQ8f9cVYYH0itAg4KKAw0UcFXQc=', 
+'sec1@correo.com', 1, 0, 1, NOW());
+
+INSERT INTO siscad_secretaria (user_id, nombre, email, dni)
+VALUES (1, 'María López', 'sec1@correo.com', '87654321');
+

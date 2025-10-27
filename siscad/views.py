@@ -15,6 +15,7 @@ from .models import (
     MatriculaCurso,
     GrupoTeoria,
     GrupoLaboratorio,
+    MatriculaLaboratorio,
 )
 import pandas as pd
 
@@ -56,14 +57,7 @@ def login_view(request):
             request.session["nombre"] = usuario.nombre
             messages.success(request, f"Bienvenido {rol} {usuario.nombre}")
 
-            if rol == "Administrador":
-                return redirect("inicio_admin")
-            elif rol == "Secretaria":
-                return redirect("inicio_secretaria")
-            elif rol == "Profesor":
-                return redirect("inicio_profesor")
-            elif rol == "Alumno":
-                return redirect("inicio_alumno")
+            return redirect(f"inicio_{rol.lower()}")
 
         else:
             messages.error(request, "Email o DNI incorrectos")
@@ -78,7 +72,16 @@ def logout_view(request):
 
 # =======================Vista de Secretaria ===============================================
 def inicio_secretaria(request):
-    return render(request, "siscad/secretaria/menu.html")
+    rol = request.session.get("rol")
+
+    if rol != "Secretaria":
+        request.session["rol"] = "Ninguno"
+        return redirect("login")
+
+    nombre = request.session.get("nombre")
+    return render(
+        request, "siscad/secretaria/menu.html", {"nombre": nombre, "rol": rol}
+    )
 
 
 def insertar_alumnos_excel(request):
@@ -263,7 +266,10 @@ def listar_grupos_laboratorio(request):
                     lab = GrupoLaboratorio.objects.get(id=lab_id)
                     lab.cupos = int(nuevos_cupos)
                     lab.save()
-                    messages.success(request, f"Cupos actualizados para {lab.grupo_teoria.curso.nombre} - Lab {lab.grupo}")
+                    messages.success(
+                        request,
+                        f"Cupos actualizados para {lab.grupo_teoria.curso.nombre} - Lab {lab.grupo}",
+                    )
                     return redirect("listar_grupos_laboratorio")
                 except GrupoLaboratorio.DoesNotExist:
                     messages.error(request, "Laboratorio no encontrado")
@@ -276,7 +282,13 @@ def listar_grupos_laboratorio(request):
             ws = wb.active
             ws.title = "Laboratorios"
 
-            headers = ["Curso", "Grupo Teoría", "Grupo Laboratorio", "Profesor", "Cupos"]
+            headers = [
+                "Curso",
+                "Grupo Teoría",
+                "Grupo Laboratorio",
+                "Profesor",
+                "Cupos",
+            ]
             for col_num, header in enumerate(headers, 1):
                 ws[f"{get_column_letter(col_num)}1"] = header
 
@@ -284,7 +296,9 @@ def listar_grupos_laboratorio(request):
                 ws[f"A{row_num}"] = lab.grupo_teoria.curso.nombre
                 ws[f"B{row_num}"] = lab.grupo_teoria.turno
                 ws[f"C{row_num}"] = lab.grupo
-                ws[f"D{row_num}"] = lab.profesor.nombre if lab.profesor else "Sin asignar"
+                ws[f"D{row_num}"] = (
+                    lab.profesor.nombre if lab.profesor else "Sin asignar"
+                )
                 ws[f"E{row_num}"] = lab.cupos
 
             archivo_nombre = "Laboratorios_Disponibles.xlsx"
@@ -295,13 +309,82 @@ def listar_grupos_laboratorio(request):
             wb.save(response)
             return response
 
-    return render(request, "siscad/secretaria/listar_grupos_laboratorio.html", {"laboratorios": laboratorios})
+    return render(
+        request,
+        "siscad/secretaria/listar_grupos_laboratorio.html",
+        {"laboratorios": laboratorios},
+    )
 
 
 def listar_alumno_grupo_laboratorio(request):
+    cursos = Curso.objects.all()
+    laboratorios = []
+    alumnos = []
+    curso_id = None
+    lab_id = None
+
     if request.method == "POST":
-        curso_id = request.POST.get("grupo_id")
-        turno = request.POST.get("laboratorio_turno")
+        curso_id = request.POST.get("curso_id")
+        lab_id = request.POST.get("lab_id")
+
+        # Filtrar laboratorios por curso seleccionado
+        if curso_id:
+            laboratorios = GrupoLaboratorio.objects.filter(
+                grupo_teoria__curso_id=curso_id
+            )
+
+        # Buscar alumnos
+        if lab_id and "buscar_alumnos" in request.POST:
+            matriculas = MatriculaLaboratorio.objects.filter(
+                grupo_laboratorio_id=lab_id
+            )
+            alumnos = [m.alumno for m in matriculas]
+
+        # Descargar Excel
+        if lab_id and "descargar_excel" in request.POST:
+            matriculas = MatriculaLaboratorio.objects.filter(
+                grupo_laboratorio_id=lab_id
+            )
+            alumnos = [m.alumno for m in matriculas]
+
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Alumnos Laboratorio"
+
+            headers = ["Nombre", "Email", "DNI", "CUI"]
+            for col_num, header in enumerate(headers, 1):
+                ws[f"{get_column_letter(col_num)}1"] = header
+
+            for row_num, alumno in enumerate(alumnos, 2):
+                ws[f"A{row_num}"] = alumno.nombre
+                ws[f"B{row_num}"] = alumno.email
+                ws[f"C{row_num}"] = alumno.dni
+                ws[f"D{row_num}"] = alumno.cui
+
+            response = HttpResponse(
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            response["Content-Disposition"] = (
+                'attachment; filename="Alumnos_Laboratorio.xlsx"'
+            )
+            wb.save(response)
+            return response
+
+    return render(
+        request,
+        "siscad/secretaria/listar_alumno_grupo_laboratorio.html",
+        {
+            "cursos": cursos,
+            "laboratorios": laboratorios,
+            "alumnos": alumnos,
+            "curso_id": curso_id,
+            "lab_id": lab_id,
+        },
+    )
+
+
+def visualizar_horarios(request):
+    pass
 
 
 # =======================Vista de Alumno====================================================

@@ -1,11 +1,11 @@
 <h2>Iniciar sesión</h2>
 <form method="POST">
-    {% csrf_token %}
-    <input type="email" name="email" placeholder="Correo electrónico" required>
-    <input type="text" name="dni" placeholder="DNI" required>
-    <button type="submit">Entrar</button>
+  {% csrf_token %}
+  <input type="email" name="email" placeholder="Correo electrónico" required />
+  <input type="text" name="dni" placeholder="DNI" required />
+  <button type="submit">Entrar</button>
 </form>
 
 {% for message in messages %}
-<p style="color:red">{{ message }}</p>
+<p style="color: red">{{ message }}</p>
 {% endfor %}

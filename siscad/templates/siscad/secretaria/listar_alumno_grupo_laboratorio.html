@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Listar Alumnos por Laboratorio</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 5px;
+        }
+        #buscador {
+            margin: 10px 0;
+            padding: 5px;
+            width: 300px;
+        }
+    </style>
+    <script>
+        function filtrarTabla() {
+            var input = document.getElementById("buscador");
+            var filtro = input.value.toLowerCase();
+            var filas = document.getElementById("tablaAlumnos").getElementsByTagName("tr");
+
+            for (var i = 1; i < filas.length; i++) {
+                var celdas = filas[i].getElementsByTagName("td");
+                var mostrar = false;
+                for (var j = 0; j < celdas.length; j++) {
+                    var texto = celdas[j].textContent || celdas[j].innerText;
+                    if (texto.toLowerCase().indexOf(filtro) > -1) {
+                        mostrar = true;
+                        break;
+                    }
+                }
+                filas[i].style.display = mostrar ? "" : "none";
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Listar Alumnos de Grupo de Laboratorio</h1>
+
+    <form method="POST">
+        {% csrf_token %}
+        <!-- Selección de curso -->
+        <label>Curso:</label>
+        <select name="curso_id" onchange="this.form.submit()">
+            <option value="">--Seleccione--</option>
+            {% for curso in cursos %}
+                <option value="{{ curso.id }}" {% if curso_id|default:'' == curso.id|stringformat:"s" %}selected{% endif %}>
+                    {{ curso.nombre }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <!-- Selección de laboratorio -->
+        {% if laboratorios %}
+        <label>Grupo de Laboratorio:</label>
+        <select name="lab_id">
+            <option value="">--Seleccione--</option>
+            {% for lab in laboratorios %}
+                <option value="{{ lab.id }}" {% if lab_id|default:'' == lab.id|stringformat:"s" %}selected{% endif %}>
+                    {{ lab.grupo }} - Teoría {{ lab.grupo_teoria.turno }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit" name="buscar_alumnos">Buscar</button>
+        {% if alumnos %}
+        <button type="submit" name="descargar_excel">Descargar Excel</button>
+        {% endif %}
+        {% endif %}
+    </form>
+
+    <hr>
+
+    {% if alumnos %}
+    <h2>Alumnos Matriculados</h2>
+    <input type="text" id="buscador" placeholder="Buscar alumno..." onkeyup="filtrarTabla()">
+    <table id="tablaAlumnos">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>DNI</th>
+                <th>CUI</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alumno in alumnos %}
+            <tr>
+                <td>{{ alumno.nombre }}</td>
+                <td>{{ alumno.email }}</td>
+                <td>{{ alumno.dni }}</td>
+                <td>{{ alumno.cui }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        {% if request.method == "POST" %}
+        <p>No hay alumnos registrados para este grupo.</p>
+        {% endif %}
+    {% endif %}
+</body>
+</html>
