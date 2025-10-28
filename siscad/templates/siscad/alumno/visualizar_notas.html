@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Notas del Alumno</title>
+    <style>
+      .notas-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .curso-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        background-color: #f9f9f9;
+      }
+      .notas-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      .notas-table th,
+      .notas-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      .notas-table th {
+        background-color: #e9ecef;
+      }
+      .promedios {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #e7f3ff;
+        border-radius: 5px;
+      }
+      .header-info {
+        background-color: #007bff;
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+      }
+      .peso-info {
+        font-size: 0.9em;
+        color: #666;
+        margin-top: 5px;
+      }
+      .tipo-section {
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="notas-container">
+      <div class="header-info">
+        <h1>Notas del Alumno</h1>
+        <p>
+          <strong>Nombre:</strong> {{ alumno.nombre }} {{ alumno.apellido }}
+        </p>
+        <p><strong>CUI:</strong> {{ alumno.cui }}</p>
+        <p><strong>Semestre:</strong> {{ semestre_actual }}</p>
+        <p><strong>Total de cursos matriculados:</strong> {{ total_cursos }}</p>
+      </div>
+
+      {% for curso_data in notas_por_curso %}
+      <div class="curso-card">
+        <h3>
+          {{ curso_data.curso }} ({{ curso_data.codigo_curso }}) - Turno {{
+          curso_data.turno }}
+        </h3>
+
+        {% if curso_data.notas %}
+        <table class="notas-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Evaluación</th>
+              <th>Valor</th>
+              <th>Peso</th>
+              <th>Contribución</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for nota in curso_data.notas %}
+            <tr>
+              <td>{{ nota.get_tipo_display }}</td>
+              <td>{{ nota.get_tipo_display }} {{ nota.periodo }}</td>
+              <td>{{ nota.valor|default:"-" }}</td>
+              <td>{{ nota.peso }}%</td>
+              <td>
+                {% if nota.valor is not None %} {{ nota.valor }} × {{ nota.peso
+                }}% = {{ nota.valor|floatformat:2 }} {% else %} - {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="promedios">
+          <div class="tipo-section">
+            <h4>Evaluaciones Parciales</h4>
+            {% for nota in curso_data.notas_parciales %}
+            <div>
+              Parcial {{ nota.periodo }}: {{ nota.valor }} ({{ nota.peso }}%)
+            </div>
+            {% empty %}
+            <div>No hay evaluaciones parciales</div>
+            {% endfor %} {% if curso_data.notas_parciales %}
+            <p>
+              <strong>Promedio Parcial:</strong> {{ curso_data.promedio_parcial }}
+            </p>
+            {% endif %}
+          </div>
+
+          <div class="tipo-section">
+            <h4>Evaluaciones Continuas</h4>
+            {% for nota in curso_data.notas_continuas %}
+            <div>
+              Continua {{ nota.periodo }}: {{ nota.valor }} ({{ nota.peso }}%)
+            </div>
+            {% empty %}
+            <div>No hay evaluaciones continuas</div>
+            {% endfor %} {% if curso_data.notas_continuas %}
+            <p>
+              <strong>Promedio Continua:</strong> {{ curso_data.promedio_continua }}
+            </p>
+            {% endif %}
+          </div>
+
+          <p>
+            <strong>Promedio Final:</strong> {{ curso_data.promedio_final }}
+          </p>
+        </div>
+        {% else %}
+        <p>No hay notas registradas para este curso.</p>
+        {% endif %}
+      </div>
+      {% empty %}
+      <div class="curso-card">
+        <p>No estás matriculado en ningún curso.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </body>
+</html>

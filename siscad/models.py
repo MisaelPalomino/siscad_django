@@ -93,7 +93,9 @@ class Curso(models.Model):
     nombre = models.CharField(max_length=100)
     semestre = models.IntegerField()
     prerequisito_codigo = models.PositiveIntegerField(null=True, blank=True)
-
+    horas_teoria = models.IntegerField(default=0)
+    horas_practica = models.IntegerField(default=0)
+    horas_laboratorio = models.IntegerField(default=0)
     peso_parcial_1 = models.IntegerField(default=0)
     peso_parcial_2 = models.IntegerField(default=0)
     peso_parcial_3 = models.IntegerField(default=0)
@@ -269,7 +271,6 @@ class Hora(models.Model):
         ("X", "Miércoles"),
         ("J", "Jueves"),
         ("V", "Viernes"),
-        ("S", "Sábado"),
     ]
 
     TIPOS_SESION = [

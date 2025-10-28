@@ -29,4 +29,9 @@ urlpatterns = [
         views.listar_alumno_grupo_laboratorio,
         name="listar_alumnos_grupo_laboratorio",
     ),
+    path(
+        "alumno/visualizar-notas/",
+        views.visualizar_notas,
+        name="visualizar_notas",
+    ),
 ]

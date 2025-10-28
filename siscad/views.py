@@ -389,35 +389,128 @@ def visualizar_horarios(request):
 
 # =======================Vista de Alumno====================================================
 def inicio_alumno(request):
-    return render(request, "siscad/alumno/menu.html")
-
-
-def notas_alumno_view(request):
     rol = request.session.get("rol")
-    email = request.session.get("email")
-    if not email or rol != Alumno:
+
+    if rol != "Alumno":
+        request.session["rol"] = "Ninguno"
         return redirect("login")
 
-    alumno = Alumno.objects.get(email=email)
-    matriculas = MatriculaCurso.objects.filter(alumno=alumno)
-    datos = []
+    nombre = request.session.get("nombre")
+    return render(request, "siscad/alumno/menu.html", {"nombre": nombre, "rol": rol})
+
+
+def visualizar_notas(request):
+    rol = request.session.get("rol")
+
+    if rol != "Alumno":
+        request.session["rol"] = "Ninguno"
+        return redirect("login")
+
+    nombre = request.session.get("nombre")
+
+    try:
+        alumno = request.user.alumno
+    except:
+        from .models import Alumno
+
+        alumno = Alumno.objects.filter(nombre=nombre).first()
+
+    if not alumno:
+        return redirect("inicio_alumno")
+
+    matriculas = MatriculaCurso.objects.filter(alumno=alumno).select_related("curso")
+
+    notas_por_curso = []
+
     for matricula in matriculas:
         curso = matricula.curso
-        notas = Nota.objects.filter(alumno=alumno, curso=curso).order_by(
+        turno = matricula.turno
+
+        notas_curso = Nota.objects.filter(alumno=alumno, curso=curso).order_by(
             "tipo", "periodo"
         )
-        datos.append(
+
+        suma_ponderada = 0
+        total_pesos = 0
+
+        notas_parciales = []
+        notas_continuas = []
+
+        for nota in notas_curso:
+            # Tratar las notas nulas como 0
+            valor_nota = nota.valor if nota.valor is not None else 0
+
+            suma_ponderada += valor_nota * nota.peso
+            total_pesos += nota.peso
+
+            if nota.tipo == "P":
+                notas_parciales.append(
+                    {
+                        "valor": valor_nota,
+                        "peso": nota.peso,
+                        "periodo": nota.periodo,
+                    }
+                )
+            elif nota.tipo == "C":
+                notas_continuas.append(
+                    {
+                        "valor": valor_nota,
+                        "peso": nota.peso,
+                        "periodo": nota.periodo,
+                    }
+                )
+
+        promedio_final = suma_ponderada / total_pesos if total_pesos > 0 else 0
+
+        promedio_parcial = (
+            sum([n["valor"] for n in notas_parciales]) / len(notas_parciales)
+            if notas_parciales
+            else 0
+        )
+        promedio_continua = (
+            sum([n["valor"] for n in notas_continuas]) / len(notas_continuas)
+            if notas_continuas
+            else 0
+        )
+
+        if promedio_continua <= 0:
+            promedio_continua = 0
+        if promedio_parcial <= 0:
+            promedio_parcial = 0
+        print(f"DEBUG - Curso: {curso.nombre}")
+        print(f"DEBUG - Promedio parcial: {promedio_parcial}")
+        print(f"DEBUG - Promedio continua: {promedio_continua}")
+        print(f"DEBUG - Promedio final: {promedio_final}")
+        print(f"DEBUG - Notas parciales: {len(notas_parciales)}")
+        print(f"DEBUG - Notas continuas: {len(notas_continuas)}")
+
+        notas_por_curso.append(
             {
-                "cursos": curso,
-                "notas": notas,
+                "curso": curso.nombre,
+                "codigo_curso": curso.codigo,
+                "turno": turno,
+                "notas": list(notas_curso),
+                "promedio_final": round(promedio_final, 2),
+                "promedio_parcial": round(promedio_parcial, 2),
+                "promedio_continua": round(promedio_continua, 2),
+                "total_notas": len(notas_curso),
+                "total_pesos": total_pesos,
+                "notas_parciales": notas_parciales,
+                "notas_continuas": notas_continuas,
+                "suma_ponderada": round(suma_ponderada, 2),
             }
         )
-    return render(
-        "alumno",
-        alumno,
-        "datos",
-        datos,
-    )
+
+    context = {
+        "alumno": alumno,
+        "notas_por_curso": notas_por_curso,
+        "total_cursos": len(notas_por_curso),
+        "semestre_actual": alumno.calcular_semestre() or "No asignado",
+        "nombre": nombre,
+        "rol": rol,
+    }
+
+    return render(request, "siscad/alumno/visualizar_notas.html", context)
 
 
 # =======================Vista de Profesor====================================================

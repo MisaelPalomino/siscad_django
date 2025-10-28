@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Menú Alumno</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f9f9f9;
+        padding: 20px;
+      }
+      h1 {
+        color: #333;
+      }
+      .menu {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        max-width: 400px;
+        margin: auto;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .menu a {
+        display: block;
+        margin: 10px 0;
+        padding: 10px;
+        text-decoration: none;
+        background: #007bff;
+        color: white;
+        text-align: center;
+        border-radius: 5px;
+      }
+      .menu a:hover {
+        background: #0056b3;
+      }
+      .user-info {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="menu">
+      <h1>Panel del Alumno</h1>
+      <div class="user-info">
+        <p>Bienvenido: <strong>{{ nombre }}</strong></p>
+        <p>Rol: <strong>{{ rol }}</strong></p>
+      </div>
+      <a href="{% url 'visualizar_notas' %}"> Visualizar Mis Notas </a>
+      <a href="{% url 'logout' %}">Cerrar sesión</a>
+    </div>
+  </body>
+</html>
