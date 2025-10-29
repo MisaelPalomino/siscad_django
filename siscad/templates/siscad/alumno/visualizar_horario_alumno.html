@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horario del Alumno</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin: 0;
+        }
+        
+        .student-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .turno-info {
+            background: #e8f4f8;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .schedule-table th {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .schedule-table td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+            height: 80px;
+            vertical-align: top;
+        }
+        
+        .schedule-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .schedule-table tr:hover {
+            background: #e8f4f8;
+        }
+        
+        .time-slot {
+            background: #34495e;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .course-cell {
+            background: #3498db;
+            color: white;
+            border-radius: 5px;
+            padding: 8px;
+            margin: 2px 0;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .course-cell:hover {
+            background: #2980b9;
+            transform: scale(1.02);
+        }
+        
+        .theory {
+            background: #e74c3c;
+        }
+        
+        .theory:hover {
+            background: #c0392b;
+        }
+        
+        .practice {
+            background: #27ae60;
+        }
+        
+        .practice:hover {
+            background: #219a52;
+        }
+        
+        .empty-cell {
+            background: #ecf0f1;
+            color: #7f8c8d;
+        }
+        
+        .day-header {
+            background: #34495e !important;
+        }
+        
+        .aula-section {
+            margin-bottom: 40px;
+        }
+        
+        .aula-title {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .schedule-table {
+                font-size: 12px;
+            }
+            
+            .schedule-table td {
+                padding: 5px;
+                height: 60px;
+            }
+            
+            .course-cell {
+                font-size: 9px;
+                padding: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Horario Académico</h1>
+        </div>
+        
+        <div class="student-info">
+            <h2>Alumno: {{ alumno.nombre }} {{ alumno.apellido }}</h2>
+            <p><strong>Email:</strong> {{ alumno.email }}</p>
+            <p><strong>Código:</strong> {{ alumno.codigo }}</p>
+        </div>
+
+        <div class="turno-info">
+            <h3>🗓️ Horario Filtrado por Turno</h3>
+            <p>Mostrando solo clases de teoría y práctica de tu turno</p>
+        </div>
+
+        {% if tabla_horarios %}
+            {% for aula, bloques in tabla_horarios.items %}
+            <div class="aula-section">
+                <h2 class="aula-title">📍 {{ aula }}</h2>
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            {% for dia, nombre in dias_lista %}
+                                <th class="day-header">{{ nombre }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in bloques %}
+                            <tr>
+                                <td class="time-slot">{{ fila.bloque }}</td>
+                                {% for dia, valor in fila.dias %}
+                                    <td>
+                                        {% if valor %}
+                                            <div class="course-cell 
+                                                {% if 'T-' in valor %}theory
+                                                {% elif 'P-' in valor %}practice
+                                                {% endif %}">
+                                                {{ valor }}
+                                            </div>
+                                        {% else %}
+                                            <div class="empty-cell">-</div>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
+
+            <div style="margin-top: 30px; padding: 15px; background: #ecf0f1; border-radius: 5px;">
+                <h3>Leyenda:</h3>
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 20px; height: 20px; background: #e74c3c; border-radius: 3px;"></div>
+                        <span>Teoría (T-A, T-B, T-C)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 20px; height: 20px; background: #27ae60; border-radius: 3px;"></div>
+                        <span>Práctica (P-A, P-B, P-C)</span>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 40px; color: #7f8c8d;">
+                <h3>No hay horarios asignados para tu turno</h3>
+                <p>No se encontraron horarios de teoría o práctica para los cursos de tu turno.</p>
+            </div>
+        {% endif %}
+        
+        <div style="margin-top: 30px; text-align: center;">
+            <a href="{% url 'inicio_alumno' %}" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                ← Volver al Dashboard
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Efectos hover para las celdas de curso
+        document.addEventListener('DOMContentLoaded', function() {
+            const courseCells = document.querySelectorAll('.course-cell');
+            
+            courseCells.forEach(cell => {
+                cell.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.02)';
+                });
+                
+                cell.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                });
+                
+                // Mostrar información al hacer clic
+                cell.addEventListener('click', function() {
+                    alert('Clase: ' + this.textContent);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

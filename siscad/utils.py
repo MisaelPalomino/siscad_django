@@ -5,6 +5,8 @@ import os
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_time
+from django.db.models import Q, Exists, OuterRef
+
 from .models import (
     Alumno,
     Curso,
@@ -17,6 +19,8 @@ from .models import (
     GrupoLaboratorio,
     Secretaria,
     Hora,
+    MatriculaLaboratorio,
+    AsistenciaAlumno,
 )
 from pathlib import Path
 
@@ -281,7 +285,7 @@ def insertar_aulas_excel(path_excel):
     file = Path(path_excel)
 
     if not file.exists():
-        print(f"❌ El archivo {file} no existe.")
+        print(f" El archivo {file} no existe.")
         return
 
     df = pd.read_excel(file)
@@ -433,7 +437,7 @@ def insertar_matriculas_curso():
     with transaction.atomic():
         MatriculaCurso.objects.bulk_create(matriculas_a_crear, batch_size=500)
 
-    print(f"✅ Matrículas generadas rápidamente: {len(matriculas_a_crear)} registros.")
+    print(f" Matrículas generadas rápidamente: {len(matriculas_a_crear)} registros.")
 
 
 def insertar_grupos_teoria():
@@ -476,18 +480,18 @@ def insertar_grupos_teoria():
             if created_flag:
                 created += 1
                 print(
-                    f"✅ Grupo creado: {curso.nombre} - Turno {turno} → Profesor: {profesores[profesor_idx].nombre}"
+                    f" Grupo creado: {curso.nombre} - Turno {turno} → Profesor: {profesores[profesor_idx].nombre}"
                 )
                 profesor_idx = (profesor_idx + 1) % len(profesores)
             else:
                 existing += 1
                 print(
-                    f"ℹ️ Grupo ya existía: {curso.nombre} - Turno {turno}. Profesor actual: {grupo.profesor.nombre if grupo.profesor else 'Sin profesor'}"
+                    f"ℹ Grupo ya existía: {curso.nombre} - Turno {turno}. Profesor actual: {grupo.profesor.nombre if grupo.profesor else 'Sin profesor'}"
                 )
 
-    print("\n📊 Resumen final:")
-    print(f"   ➕ {created} grupos creados")
-    print(f"   🔁 {existing} grupos ya existían")
+    print("\n Resumen final:")
+    print(f"    {created} grupos creados")
+    print(f"    {existing} grupos ya existían")
 
 
 def insertar_grupos_practica():
@@ -662,21 +666,6 @@ def insertar_grupos_laboratorio():
 
     print(f" Laboratorios generados correctamente: {len(laboratorios_a_crear)}")
 
-
-def insertar_matriculas_laboratorios():
-    pass
-
-
-def insertar_horas():
-    pass
-
-
-def insertar_asistencia_profesor():
-    pass
-
-
-def insertar_asistencia_alumno():
-    pass
 
 # DÍAS y TURNOS
 DIAS = ["L", "M", "X", "J", "V"]  # Lunes-Viernes
@@ -1166,7 +1155,7 @@ def generar_horarios_modeloA():
     print(f"✅ Excel generado en: {ruta_archivo}")
     if problemas:
         print(
-            f"⚠️ Se detectaron {len(problemas)} problemas. Revisa la hoja 'problemas' en el Excel."
+            f" Se detectaron {len(problemas)} problemas. Revisa la hoja 'problemas' en el Excel."
         )
     return ruta_archivo
 
@@ -1178,7 +1167,7 @@ def cargar_horarios_desde_excel(ruta_excel="siscad/datos/horarios_debug.xlsx"):
     try:
         df = pd.read_excel(ruta_excel)
     except Exception as e:
-        print(f"❌ Error al leer el archivo Excel: {e}")
+        print(f" Error al leer el archivo Excel: {e}")
         return
 
     tipo_map = {"Teoría": "T", "Práctica": "P", "Laboratorio": "L", "Receso": "R"}
@@ -1193,7 +1182,7 @@ def cargar_horarios_desde_excel(ruta_excel="siscad/datos/horarios_debug.xlsx"):
                 tipo_sesion = tipo_map.get(tipo_sesion_humano)
 
                 if tipo_sesion is None:
-                    print(f"⚠️ Tipo de sesión desconocido en fila: {tipo_sesion_humano}")
+                    print(f" Tipo de sesión desconocido en fila: {tipo_sesion_humano}")
                     omitidos += 1
                     continue
 
@@ -1204,7 +1193,7 @@ def cargar_horarios_desde_excel(ruta_excel="siscad/datos/horarios_debug.xlsx"):
 
                 aula = Aula.objects.filter(nombre=aula_nombre).first()
                 if not aula:
-                    print(f"⚠️ Aula no encontrada: {aula_nombre}")
+                    print(f" Aula no encontrada: {aula_nombre}")
                     omitidos += 1
                     continue
 
@@ -1242,7 +1231,7 @@ def cargar_horarios_desde_excel(ruta_excel="siscad/datos/horarios_debug.xlsx"):
                     ).first()
 
                 if not grupo_obj:
-                    print(f"⚠️ No se encontró el grupo para la fila: {row}")
+                    print(f" No se encontró el grupo para la fila: {row}")
                     omitidos += 1
                     continue
 
@@ -1270,12 +1259,140 @@ def cargar_horarios_desde_excel(ruta_excel="siscad/datos/horarios_debug.xlsx"):
                 creados += 1
 
             except Exception as e:
-                print(f"❌ Error al procesar fila: {row}. Error: {e}")
+                print(f" Error al procesar fila: {row}. Error: {e}")
                 omitidos += 1
                 continue
 
     print(f"✅ Horarios insertados: {creados}")
     print(f"ℹ️ Filas omitidas: {omitidos}")
+
+
+def insertar_matriculas_laboratorio():
+    """
+    Función para generar automáticamente matrículas de laboratorio
+    basándose en las matrículas de curso existentes.
+    """
+    print("Iniciando proceso de matrículas automáticas de laboratorio...")
+
+    with transaction.atomic():
+        # Subconsulta para verificar si ya tiene matrícula de laboratorio en el mismo curso
+        matricula_lab_existente = MatriculaLaboratorio.objects.filter(
+            alumno=OuterRef("alumno"),
+            grupo_laboratorio__grupo_teoria__curso=OuterRef("curso"),
+        )
+
+        # Obtener matrículas de curso que no tienen laboratorio asignado en el mismo curso
+        matriculas_sin_lab = MatriculaCurso.objects.filter(
+            ~Exists(matricula_lab_existente)
+        ).select_related("alumno", "curso")
+
+        print(f"Encontradas {matriculas_sin_lab.count()} matrículas sin laboratorio")
+
+        matriculas_creadas = 0
+        errores = 0
+
+        for matricula in matriculas_sin_lab:
+            try:
+                alumno = matricula.alumno
+                curso = matricula.curso
+                turno_alumno = matricula.turno
+
+                print(
+                    f"Procesando: {alumno.nombre} - {curso.nombre} (Turno {turno_alumno})"
+                )
+
+                # Buscar grupos de laboratorio disponibles para este curso
+                grupos_lab = (
+                    GrupoLaboratorio.objects.filter(
+                        grupo_teoria__curso=curso, cupos__gt=0
+                    )
+                    .select_related("profesor")
+                    .order_by("grupo")
+                )
+
+                if not grupos_lab:
+                    print(f"  ❌ No hay grupos de laboratorio para {curso.nombre}")
+                    errores += 1
+                    continue
+
+                grupos_prioritarios = []
+                grupos_secundarios = []
+                otros_grupos = []
+
+                for grupo in grupos_lab:
+                    # Prioridad 1: Mismo grupo que el turno (A→A, B→B, C→C)
+                    if grupo.grupo == turno_alumno:
+                        grupos_prioritarios.append(grupo)
+                    # Prioridad 2: Grupos según reglas específicas
+                    elif (
+                        (turno_alumno == "A" and grupo.grupo == "C")
+                        or (turno_alumno == "B" and grupo.grupo == "D")
+                        or (turno_alumno == "C" and grupo.grupo == "A")
+                    ):
+                        grupos_secundarios.append(grupo)
+                    # Prioridad 3: Otros grupos disponibles
+                    else:
+                        otros_grupos.append(grupo)
+
+                # Seleccionar grupo por prioridad
+                grupo_seleccionado = None
+
+                if grupos_prioritarios:
+                    grupo_seleccionado = grupos_prioritarios[0]
+                    tipo = "prioritario"
+                elif grupos_secundarios:
+                    grupo_seleccionado = grupos_secundarios[0]
+                    tipo = "secundario"
+                elif otros_grupos:
+                    grupo_seleccionado = otros_grupos[0]
+                    tipo = "disponible"
+                else:
+                    print(f" No hay grupos disponibles con cupos")
+                    errores += 1
+                    continue
+
+                # Verificar nuevamente que no esté matriculado (por si acaso)
+                if MatriculaLaboratorio.objects.filter(
+                    alumno=alumno, grupo_laboratorio__grupo_teoria__curso=curso
+                ).exists():
+                    print(f" Ya está matriculado en un laboratorio de este curso")
+                    continue
+
+                # Crear la matrícula de laboratorio
+                matricula_lab = MatriculaLaboratorio(
+                    alumno=alumno, grupo_laboratorio=grupo_seleccionado
+                )
+                matricula_lab.save()
+
+                # Decrementar cupos
+                grupo_seleccionado.cupos -= 1
+                grupo_seleccionado.save()
+
+                matriculas_creadas += 1
+                print(
+                    f"  🎓 Matrícula creada: Lab {grupo_seleccionado.grupo} ({tipo}) - Cupos restantes: {grupo_seleccionado.cupos}"
+                )
+
+            except Exception as e:
+                print(f"  ❌ Error procesando matrícula: {str(e)}")
+                errores += 1
+                continue
+
+        print(f"\n📊 Resumen del proceso:")
+        print(f"   Matrículas procesadas: {matriculas_sin_lab.count()}")
+        print(f"   Matrículas creadas: {matriculas_creadas}")
+        print(f"   Errores: {errores}")
+
+        return matriculas_creadas
+
+
+def insertar_asistencia_profesor():
+    pass
+
+
+def insertar_asistencia_alumno():
+    pass
+
 
 def insertar_data_excel():
     insertar_alumnos_excel("siscad/datos/Alumnos.xlsx")
@@ -1293,4 +1410,266 @@ def generar_data():
     insertar_grupos_laboratorio()
     generar_horarios_modeloA()
     cargar_horarios_desde_excel()
-    pass
+    insertar_matriculas_laboratorio()
+    ejecutar_generacion_asistencias()
+
+
+from datetime import datetime, date, timedelta
+from django.db import transaction
+from django.db.models import Q
+
+
+def insertar_asistencia_alumno():
+    """
+    Función para pregenerar asistencias de alumnos desde el 2 de septiembre 2025 hasta el 25 de diciembre 2025.
+    - Desde 02-09-2025 hasta hoy (28-10-2025): Todas las asistencias como Presente
+    - Desde mañana (29-10-2025) hasta 25-12-2025: Todas las asistencias como Falta
+    """
+    print(" INICIANDO GENERACIÓN DE ASISTENCIAS AUTOMÁTICAS 2025...")
+
+    # Fechas importantes CORREGIDAS para 2025
+    fecha_inicio = date(2025, 9, 2)  # 2 de septiembre de 2025
+    fecha_fin = date(2025, 12, 25)  # 25 de diciembre de 2025
+    fecha_hoy = date(2025, 10, 28)  # 28 de octubre de 2025 (hoy)
+
+    print(f" Rango de fechas: {fecha_inicio} hasta {fecha_fin}")
+    print(f" Fecha de hoy: {fecha_hoy}")
+    print(f" Presentes desde: {fecha_inicio} hasta {fecha_hoy}")
+    print(f" Faltas desde: {fecha_hoy + timedelta(days=1)} hasta {fecha_fin}")
+
+    with transaction.atomic():
+        asistencias_creadas = 0
+        errores = 0
+
+        # Obtener todos los alumnos con matrículas
+        alumnos = Alumno.objects.filter(
+            Q(matriculas_curso__isnull=False) | Q(matriculas_laboratorio__isnull=False)
+        ).distinct()
+
+        print(f"👥 Procesando {alumnos.count()} alumnos...")
+
+        for alumno in alumnos:
+            try:
+                print(f"\n🎓 Procesando alumno: {alumno.nombre}")
+
+                # Obtener horarios del alumno (teoría, práctica y laboratorio)
+                horarios_alumno = obtener_horarios_alumno(alumno)
+
+                if not horarios_alumno:
+                    print(f"    No se encontraron horarios para {alumno.nombre}")
+                    continue
+
+                # Generar asistencias para cada fecha en el rango
+                fecha_actual = fecha_inicio
+                while fecha_actual <= fecha_fin:
+                    # Solo días de semana (Lunes a Viernes)
+                    if fecha_actual.weekday() < 5:  # 0=Lunes, 4=Viernes
+                        asistencias_fecha = generar_asistencias_fecha(
+                            alumno, fecha_actual, horarios_alumno, fecha_hoy
+                        )
+                        asistencias_creadas += asistencias_fecha
+
+                    fecha_actual += timedelta(days=1)
+
+                print(f"    Asistencias generadas para {alumno.nombre}")
+
+            except Exception as e:
+                print(f"    Error procesando alumno {alumno.nombre}: {str(e)}")
+                errores += 1
+                continue
+
+        print(f"\n📊 RESUMEN FINAL:")
+        print(f"   Asistencias creadas: {asistencias_creadas}")
+        print(f"   Errores: {errores}")
+
+        return asistencias_creadas
+
+
+def obtener_horarios_alumno(alumno):
+    """
+    Obtiene todos los horarios (teoría, práctica, laboratorio) de un alumno
+    """
+    # Obtener matrículas de curso
+    matriculas_curso = MatriculaCurso.objects.filter(alumno=alumno)
+    cursos_turnos = {m.curso_id: m.turno for m in matriculas_curso}
+    cursos_ids = list(cursos_turnos.keys())
+
+    # Obtener matrículas de laboratorio
+    matriculas_lab = MatriculaLaboratorio.objects.filter(alumno=alumno)
+    grupos_lab_ids = [ml.grupo_laboratorio_id for ml in matriculas_lab]
+
+    # Consultar horarios
+    horarios = (
+        Hora.objects.filter(
+            # Teoría del mismo turno
+            Q(
+                grupo_teoria__curso_id__in=cursos_ids,
+                grupo_teoria__turno__in=[turno for turno in cursos_turnos.values()],
+            )
+            |
+            # Práctica del mismo turno
+            Q(
+                grupo_practica__grupo_teoria__curso_id__in=cursos_ids,
+                grupo_practica__turno__in=[turno for turno in cursos_turnos.values()],
+            )
+            |
+            # Laboratorios matriculados
+            Q(grupo_laboratorio_id__in=grupos_lab_ids)
+        )
+        .select_related(
+            "grupo_teoria__curso",
+            "grupo_practica__grupo_teoria__curso",
+            "grupo_laboratorio__grupo_teoria__curso",
+        )
+        .order_by("dia", "hora_inicio")
+    )
+
+    return horarios
+
+
+def generar_asistencias_fecha(alumno, fecha, horarios_alumno, fecha_hoy):
+    """
+    Genera asistencias para un alumno en una fecha específica
+    """
+    asistencias_creadas = 0
+    dia_semana = fecha.strftime("%A")
+
+    dias_map = {
+        "Monday": "L",
+        "Tuesday": "M",
+        "Wednesday": "X",
+        "Thursday": "J",
+        "Friday": "V",
+    }
+
+    dia_codigo = dias_map.get(dia_semana)
+    if not dia_codigo:
+        return 0
+
+    horarios_dia = [h for h in horarios_alumno if h.dia == dia_codigo]
+
+    if not horarios_dia:
+        return 0
+
+    estado = "P" if fecha <= fecha_hoy else "F"
+
+    horarios_procesados = set()
+
+    for hora in horarios_dia:
+        try:
+            if hora.grupo_teoria:
+                curso_id = hora.grupo_teoria.curso_id
+                tipo = "T"
+            elif hora.grupo_practica:
+                curso_id = hora.grupo_practica.grupo_teoria.curso_id
+                tipo = "P"
+            elif hora.grupo_laboratorio:
+                curso_id = hora.grupo_laboratorio.grupo_teoria.curso_id
+                tipo = "L"
+            else:
+                continue
+
+            clave_curso = f"{curso_id}_{dia_codigo}_{tipo}"
+
+            if clave_curso in horarios_procesados:
+                continue
+
+            horarios_procesados.add(clave_curso)
+
+            asistencia_existente = AsistenciaAlumno.objects.filter(
+                alumno=alumno, fecha=fecha, hora=hora
+            ).exists()
+
+            if asistencia_existente:
+                continue
+
+            asistencia = AsistenciaAlumno(
+                alumno=alumno, fecha=fecha, estado=estado, hora=hora
+            )
+            asistencia.save()
+
+            asistencias_creadas += 1
+
+            curso_nombre = ""
+            if hora.grupo_teoria:
+                curso_nombre = hora.grupo_teoria.curso.nombre
+            elif hora.grupo_practica:
+                curso_nombre = hora.grupo_practica.grupo_teoria.curso.nombre
+            elif hora.grupo_laboratorio:
+                curso_nombre = hora.grupo_laboratorio.grupo_teoria.curso.nombre
+
+            estado_display = " PRESENTE" if estado == "P" else " FALTA"
+            print(f"      {fecha} - {curso_nombre} - {estado_display}")
+
+        except Exception as e:
+            print(f"       Error en asistencia {fecha}: {str(e)}")
+            continue
+
+    return asistencias_creadas
+
+
+def mostrar_estadisticas_asistencias():
+    """
+    Muestra estadísticas de las asistencias generadas
+    """
+    print("\n" + "=" * 60)
+    print("📊 ESTADÍSTICAS DE ASISTENCIAS 2025")
+    print("=" * 60)
+
+    total_asistencias = AsistenciaAlumno.objects.count()
+    presentes = AsistenciaAlumno.objects.filter(estado="P").count()
+    faltas = AsistenciaAlumno.objects.filter(estado="F").count()
+
+    print(f" Total de asistencias: {total_asistencias}")
+    print(f" Presentes (hasta 28-10-2025): {presentes}")
+    print(f" Faltas (desde 29-10-2025): {faltas}")
+
+    if total_asistencias > 0:
+        porcentaje_presente = (presentes / total_asistencias) * 100
+        print(f"📈 Porcentaje de asistencia: {porcentaje_presente:.1f}%")
+
+    print(f"\n Distribución por meses:")
+    meses = AsistenciaAlumno.objects.dates("fecha", "month")
+    for mes in meses:
+        asistencias_mes = AsistenciaAlumno.objects.filter(
+            fecha__year=mes.year, fecha__month=mes.month
+        )
+        presentes_mes = asistencias_mes.filter(estado="P").count()
+        total_mes = asistencias_mes.count()
+
+        if total_mes > 0:
+            porcentaje_mes = (presentes_mes / total_mes) * 100
+            print(
+                f"   {mes.strftime('%B %Y')}: {presentes_mes}/{total_mes} ({porcentaje_mes:.1f}%)"
+            )
+
+
+def limpiar_asistencias():
+    """
+    Elimina todas las asistencias (solo para testing)
+    """
+    print("⚠️  ELIMINANDO TODAS LAS ASISTENCIAS...")
+
+    count = AsistenciaAlumno.objects.count()
+    AsistenciaAlumno.objects.all().delete()
+
+    print(f"🗑️  Eliminadas {count} asistencias")
+
+
+def ejecutar_generacion_asistencias():
+    """
+    Función principal para ejecutar la generación de asistencias 2025
+    """
+    print(" INICIANDO GENERACIÓN MASIVA DE ASISTENCIAS 2025")
+    print("=" * 70)
+
+    mostrar_estadisticas_asistencias()
+
+    print("\n GENERANDO ASISTENCIAS...")
+    asistencias_creadas = insertar_asistencia_alumno()
+
+    mostrar_estadisticas_asistencias()
+
+    print(f"\n Proceso completado. Asistencias creadas: {asistencias_creadas}")
+
+    return asistencias_creadas

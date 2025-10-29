@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Asistencias</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .student-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .curso-selector {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .estadisticas {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f39c12;
+        }
+        
+        .estadisticas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .estadistica-item {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .tabla-asistencias {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .tabla-asistencias th {
+            background: #2c3e50;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .tabla-asistencias td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .tabla-asistencias tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .estado-presente {
+            background: #d4edda;
+            color: #155724;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        
+        .estado-falta {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        
+        .tipo-teoria {
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .tipo-practica {
+            border-left: 4px solid #27ae60;
+        }
+        
+        .tipo-laboratorio {
+            border-left: 4px solid #f39c12;
+        }
+        
+        .btn-seleccionar {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn-seleccionar:hover {
+            background: #2980b9;
+        }
+        
+        .curso-activo {
+            background: #2c3e50 !important;
+            color: white;
+        }
+        
+        .sin-seleccion {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .porcentaje-alto {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .porcentaje-medio {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        
+        .porcentaje-bajo {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Mis Asistencias</h1>
+        </div>
+        
+        <div class="student-info">
+            <h2>Alumno: {{ alumno.nombre }} {{ alumno.apellido }}</h2>
+            <p><strong>Código:</strong> {{ alumno.codigo }} | <strong>Email:</strong> {{ alumno.email }}</p>
+        </div>
+
+        <!-- Selector de Curso -->
+        <div class="curso-selector">
+            <h3>🎯 Seleccionar Curso</h3>
+            <p>Elige un curso para ver tus asistencias:</p>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+                {% for curso in cursos_matriculados %}
+                <a href="?curso_id={{ curso.id }}" 
+                   class="btn-seleccionar {% if curso_seleccionado and curso_seleccionado.id == curso.id %}curso-activo{% endif %}">
+                    {{ curso.nombre }} 
+                    <small>({{ curso.tipo }}{% if curso.turno %} - Turno {{ curso.turno }}{% endif %}{% if curso.grupo_lab %} - Lab {{ curso.grupo_lab }}{% endif %})</small>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if curso_seleccionado %}
+            <!-- Estadísticas del Curso Seleccionado -->
+            <div class="estadisticas">
+                <h3>📈 Estadísticas de {{ curso_seleccionado.nombre }}</h3>
+                
+                <div class="estadisticas-grid">
+                    <div class="estadistica-item">
+                        <h4>Asistencia General</h4>
+                        <p style="font-size: 24px; margin: 5px 0;">
+                            <span class="{% if estadisticas_curso.porcentaje_asistencia >= 80 %}porcentaje-alto{% elif estadisticas_curso.porcentaje_asistencia >= 60 %}porcentaje-medio{% else %}porcentaje-bajo{% endif %}">
+                                {{ estadisticas_curso.porcentaje_asistencia }}%
+                            </span>
+                        </p>
+                        <p>{{ estadisticas_curso.presentes }}/{{ estadisticas_curso.total }} clases</p>
+                    </div>
+                    
+                    <div class="estadistica-item">
+                        <h4>Teoría</h4>
+                        <p style="font-size: 20px; margin: 5px 0;">
+                            {{ estadisticas_curso.teorias_presentes }}/{{ estadisticas_curso.teorias_total }}
+                        </p>
+                        <p>presentes</p>
+                    </div>
+                    
+                    <div class="estadistica-item">
+                        <h4>Práctica</h4>
+                        <p style="font-size: 20px; margin: 5px 0;">
+                            {{ estadisticas_curso.practicas_presentes }}/{{ estadisticas_curso.practicas_total }}
+                        </p>
+                        <p>presentes</p>
+                    </div>
+                    
+                    {% if estadisticas_curso.laboratorios_total > 0 %}
+                    <div class="estadistica-item">
+                        <h4>Laboratorio</h4>
+                        <p style="font-size: 20px; margin: 5px 0;">
+                            {{ estadisticas_curso.laboratorios_presentes }}/{{ estadisticas_curso.laboratorios_total }}
+                        </p>
+                        <p>presentes</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tabla de Asistencias -->
+            {% if asistencias_curso %}
+            <div>
+                <h3>📅 Historial de Asistencias</h3>
+                <table class="tabla-asistencias">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Día</th>
+                            <th>Horario</th>
+                            <th>Tipo</th>
+                            <th>Grupo</th>
+                            <th>Aula</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asistencia in asistencias_curso %}
+                        <tr class="tipo-{{ asistencia.tipo_clase|lower }}">
+                            <td>{{ asistencia.fecha }}</td>
+                            <td>{{ asistencia.dia_semana }}</td>
+                            <td>{{ asistencia.hora_inicio }} - {{ asistencia.hora_fin }}</td>
+                            <td>{{ asistencia.tipo_clase }}</td>
+                            <td>{{ asistencia.detalle_clase }}</td>
+                            <td>{{ asistencia.aula }}</td>
+                            <td>
+                                <span class="{% if asistencia.estado == 'P' %}estado-presente{% else %}estado-falta{% endif %}">
+                                    {{ asistencia.estado_display }}
+                                </span>
+                                {% if not asistencia.es_pasado %}
+                                <small style="color: #7f8c8d;">(Futuro)</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="sin-seleccion">
+                <h3>No hay asistencias registradas</h3>
+                <p>No se encontraron registros de asistencia para este curso.</p>
+            </div>
+            {% endif %}
+            
+        {% else %}
+            <!-- Mensaje cuando no hay curso seleccionado -->
+            <div class="sin-seleccion">
+                <h3>Selecciona un curso</h3>
+                <p>Elige uno de tus cursos matriculados para ver las asistencias.</p>
+            </div>
+        {% endif %}
+
+        <div style="margin-top: 30px; text-align: center;">
+            <a href="{% url 'inicio_alumno' %}" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                ← Volver al Dashboard
+            </a>
+        </div>
+    </div>
+</body>
+</html>

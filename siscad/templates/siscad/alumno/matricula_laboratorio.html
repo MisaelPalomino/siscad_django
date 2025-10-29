@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrícula de Laboratorios</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .student-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+        }
+        
+        .curso-title {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .grupo-card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+        }
+        
+        .grupo-disponible {
+            border-left: 4px solid #27ae60;
+        }
+        
+        .grupo-lleno {
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .btn-matricular {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn-matricular:hover {
+            background: #2980b9;
+        }
+        
+        .btn-matricular:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .ya-matriculado {
+            background: #27ae60;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .sin-cupos {
+            background: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .cupos-info {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        
+        .profesor-info {
+            font-size: 12px;
+            color: #2c3e50;
+            margin-top: 5px;
+        }
+        
+        .messages {
+            margin-bottom: 20px;
+        }
+        
+        .alert {
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 Matrícula de Laboratorios</h1>
+        </div>
+        
+        <div class="student-info">
+            <h2>Alumno: {{ alumno.nombre }} {{ alumno.apellido }}</h2>
+            <p><strong>Código:</strong> {{ alumno.codigo }} | <strong>Email:</strong> {{ alumno.email }}</p>
+        </div>
+
+        <!-- Mensajes -->
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Laboratorios Matriculados Actualmente -->
+        {% if matriculas_lab_actuales %}
+        <div class="section">
+            <h2 class="curso-title">📋 Laboratorios Matriculados</h2>
+            {% for matricula in matriculas_lab_actuales %}
+            <div class="grupo-card">
+                <h4>{{ matricula.grupo_laboratorio.grupo_teoria.curso.nombre }}</h4>
+                <p><strong>Grupo:</strong> Laboratorio {{ matricula.grupo_laboratorio.grupo }}</p>
+                {% if matricula.grupo_laboratorio.profesor %}
+                <p class="profesor-info"><strong>Profesor:</strong> {{ matricula.grupo_laboratorio.profesor.nombre }}</p>
+                {% endif %}
+                <span class="ya-matriculado">✅ Ya matriculado</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Laboratorios Disponibles -->
+        {% if laboratorios_disponibles %}
+        <div class="section">
+            <h2 class="curso-title">🎯 Laboratorios Disponibles</h2>
+            <form method="POST">
+                {% csrf_token %}
+                
+                {% for item in laboratorios_disponibles %}
+                <div style="margin-bottom: 25px;">
+                    <h3>{{ item.curso.nombre }} (Turno: {{ item.turno_alumno }})</h3>
+                    
+                    {% if item.ya_matriculado %}
+                    <p style="color: #27ae60;">✅ Ya estás matriculado en un laboratorio de este curso.</p>
+                    {% else %}
+                        {% for grupo in item.grupos %}
+                        <div class="grupo-card grupo-disponible">
+                            <input type="radio" 
+                                   name="grupo_laboratorio" 
+                                   value="{{ grupo.id }}" 
+                                   id="grupo_{{ grupo.id }}"
+                                   {% if grupo.cupos <= 0 %}disabled{% endif %}>
+                            <label for="grupo_{{ grupo.id }}" style="margin-left: 10px;">
+                                <strong>Grupo {{ grupo.grupo }}</strong>
+                                <span class="cupos-info">({{ grupo.cupos }} cupos disponibles)</span>
+                                
+                                {% if grupo.profesor %}
+                                <p class="profesor-info"><strong>Profesor:</strong> {{ grupo.profesor.nombre }}</p>
+                                {% else %}
+                                <p class="profesor-info"><strong>Profesor:</strong> Por asignar</p>
+                                {% endif %}
+                                
+                                {% if grupo.cupos <= 0 %}
+                                <span class="sin-cupos">❌ Sin cupos</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                {% if not matriculas_lab_actuales or laboratorios_disponibles|length > matriculas_lab_actuales|length %}
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="submit" class="btn-matricular">🎓 Matricular en Laboratorio</button>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+        {% else %}
+        <div class="section">
+            <h2 class="curso-title">ℹ️ Información</h2>
+            <p>No hay laboratorios disponibles para matricularte en este momento.</p>
+            <p>Esto puede deberse a que:</p>
+            <ul>
+                <li>No tienes cursos matriculados</li>
+                <li>Ya estás matriculado en todos los laboratorios disponibles</li>
+                <li>No hay laboratorios con cupos para tu turno</li>
+            </ul>
+        </div>
+        {% endif %}
+
+        <div style="margin-top: 30px; text-align: center;">
+            <a href="{% url 'inicio_alumno' %}" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                ← Volver al Dashboard
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Validación de selección
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const submitBtn = document.querySelector('.btn-matricular');
+            
+            if (form && submitBtn) {
+                form.addEventListener('submit', function(e) {
+                    const selected = document.querySelector('input[name="grupo_laboratorio"]:checked');
+                    if (!selected) {
+                        e.preventDefault();
+                        alert('Por favor, selecciona un grupo de laboratorio.');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

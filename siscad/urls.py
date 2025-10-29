@@ -39,4 +39,19 @@ urlpatterns = [
         views.visualizar_notas,
         name="visualizar_notas",
     ),
+    path(
+        "alumno/visualizar-horario-alumno/",
+        views.visualizar_horario_alumno,
+        name="visualizar_horario_alumno",
+    ),
+    path(
+        "alumno/matricula-laboratorio/",
+        views.matricula_laboratorio,
+        name="matricula_laboratorio",
+    ),
+    path(
+        "alumno/visualizar-asistencias-alumnos/",
+        views.visualizar_asistencias_alumno,
+        name="visualizar_asistencias_alumno",
+    ),
 ]
