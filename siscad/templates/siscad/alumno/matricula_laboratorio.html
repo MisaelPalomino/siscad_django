@@ -166,7 +166,7 @@
         <!-- Laboratorios Matriculados Actualmente -->
         {% if matriculas_lab_actuales %}
         <div class="section">
-            <h2 class="curso-title">📋 Laboratorios Matriculados</h2>
+            <h2 class="curso-title"> Laboratorios Matriculados</h2>
             {% for matricula in matriculas_lab_actuales %}
             <div class="grupo-card">
                 <h4>{{ matricula.grupo_laboratorio.grupo_teoria.curso.nombre }}</h4>
@@ -174,7 +174,7 @@
                 {% if matricula.grupo_laboratorio.profesor %}
                 <p class="profesor-info"><strong>Profesor:</strong> {{ matricula.grupo_laboratorio.profesor.nombre }}</p>
                 {% endif %}
-                <span class="ya-matriculado">✅ Ya matriculado</span>
+                <span class="ya-matriculado"> Ya matriculado</span>
             </div>
             {% endfor %}
         </div>
@@ -183,7 +183,7 @@
         <!-- Laboratorios Disponibles -->
         {% if laboratorios_disponibles %}
         <div class="section">
-            <h2 class="curso-title">🎯 Laboratorios Disponibles</h2>
+            <h2 class="curso-title"> Laboratorios Disponibles</h2>
             <form method="POST">
                 {% csrf_token %}
                 
@@ -212,7 +212,7 @@
                                 {% endif %}
                                 
                                 {% if grupo.cupos <= 0 %}
-                                <span class="sin-cupos">❌ Sin cupos</span>
+                                <span class="sin-cupos"> Sin cupos</span>
                                 {% endif %}
                             </label>
                         </div>
@@ -230,7 +230,7 @@
         </div>
         {% else %}
         <div class="section">
-            <h2 class="curso-title">ℹ️ Información</h2>
+            <h2 class="curso-title"> Información</h2>
             <p>No hay laboratorios disponibles para matricularte en este momento.</p>
             <p>Esto puede deberse a que:</p>
             <ul>

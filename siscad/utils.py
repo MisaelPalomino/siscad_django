@@ -296,7 +296,7 @@ def insertar_aulas_excel(path_excel):
     missing = [col for col in required_columns if col not in df.columns]
 
     if missing:
-        print(f"❌ Faltan columnas obligatorias: {', '.join(missing)}")
+        print(f" Faltan columnas obligatorias: {', '.join(missing)}")
         return
 
     created = 0
@@ -329,10 +329,10 @@ def insertar_aulas_excel(path_excel):
                 updated += 1
 
     print(
-        f"✅ Importación completada: {created} aulas creadas, {updated} aulas actualizadas."
+        f" Importación completada: {created} aulas creadas, {updated} aulas actualizadas."
     )
     if errores:
-        print("⚠️ Errores encontrados:")
+        print(" Errores encontrados:")
         for err in errores[:10]:
             print(f"   - {err}")
         if len(errores) > 10:
@@ -400,7 +400,7 @@ def insertar_matriculas_curso():
         semestre = alumno.calcular_semestre()
         if semestre not in alumnos_por_semestre:
             alumnos_por_semestre[semestre] = []
-        alumnos_por_semestre[semestre].append(alumno)
+        alumnos_poor_semestre[semestre].append(alumno)
 
     cursos_por_semestre = {}
     for curso in cursos:
@@ -511,7 +511,6 @@ def insertar_grupos_practica():
         for gt in grupos_teoria:
             curso = gt.curso
 
-            # ✅ Verificar si el curso tiene horas de práctica
             if (
                 curso.horas_practica is None
                 or curso.horas_practica == 0
@@ -519,7 +518,7 @@ def insertar_grupos_practica():
             ):
                 sin_horas_practica += 1
                 print(
-                    f"⏭️ Omitido (sin horas de práctica): {curso.nombre} - Turno {gt.turno}"
+                    f" Omitido (sin horas de práctica): {curso.nombre} - Turno {gt.turno}"
                 )
                 continue
 
@@ -1264,8 +1263,8 @@ def cargar_horarios_desde_excel(ruta_excel="siscad/datos/horarios_debug.xlsx"):
                 omitidos += 1
                 continue
 
-    print(f"✅ Horarios insertados: {creados}")
-    print(f"ℹ️ Filas omitidas: {omitidos}")
+    print(f" Horarios insertados: {creados}")
+    print(f"ℹ Filas omitidas: {omitidos}")
 
 
 def insertar_matriculas_laboratorio():
@@ -1312,7 +1311,7 @@ def insertar_matriculas_laboratorio():
                 )
 
                 if not grupos_lab:
-                    print(f"  ❌ No hay grupos de laboratorio para {curso.nombre}")
+                    print(f"   No hay grupos de laboratorio para {curso.nombre}")
                     errores += 1
                     continue
 
@@ -1375,7 +1374,7 @@ def insertar_matriculas_laboratorio():
                 )
 
             except Exception as e:
-                print(f"  ❌ Error procesando matrícula: {str(e)}")
+                print(f"   Error procesando matrícula: {str(e)}")
                 errores += 1
                 continue
 
@@ -1448,7 +1447,7 @@ def insertar_asistencia_alumno():
             Q(matriculas_curso__isnull=False) | Q(matriculas_laboratorio__isnull=False)
         ).distinct()
 
-        print(f"👥 Procesando {alumnos.count()} alumnos...")
+        print(f" Procesando {alumnos.count()} alumnos...")
 
         for alumno in alumnos:
             try:
@@ -1480,7 +1479,7 @@ def insertar_asistencia_alumno():
                 errores += 1
                 continue
 
-        print(f"\n📊 RESUMEN FINAL:")
+        print(f"\n RESUMEN FINAL:")
         print(f"   Asistencias creadas: {asistencias_creadas}")
         print(f"   Errores: {errores}")
 
@@ -1615,7 +1614,7 @@ def mostrar_estadisticas_asistencias():
     Muestra estadísticas de las asistencias generadas
     """
     print("\n" + "=" * 60)
-    print("📊 ESTADÍSTICAS DE ASISTENCIAS 2025")
+    print(" ESTADÍSTICAS DE ASISTENCIAS 2025")
     print("=" * 60)
 
     total_asistencias = AsistenciaAlumno.objects.count()
@@ -1628,7 +1627,7 @@ def mostrar_estadisticas_asistencias():
 
     if total_asistencias > 0:
         porcentaje_presente = (presentes / total_asistencias) * 100
-        print(f"📈 Porcentaje de asistencia: {porcentaje_presente:.1f}%")
+        print(f" Porcentaje de asistencia: {porcentaje_presente:.1f}%")
 
     print(f"\n Distribución por meses:")
     meses = AsistenciaAlumno.objects.dates("fecha", "month")
@@ -1650,12 +1649,12 @@ def limpiar_asistencias():
     """
     Elimina todas las asistencias (solo para testing)
     """
-    print("⚠️  ELIMINANDO TODAS LAS ASISTENCIAS...")
+    print("  ELIMINANDO TODAS LAS ASISTENCIAS...")
 
     count = AsistenciaAlumno.objects.count()
     AsistenciaAlumno.objects.all().delete()
 
-    print(f"🗑️  Eliminadas {count} asistencias")
+    print(f"  Eliminadas {count} asistencias")
 
 
 def ejecutar_generacion_asistencias():
@@ -1691,14 +1690,14 @@ def insertar_asistencia_profesor():
     fecha_fin = date(2025, 12, 25)  # 25 de diciembre de 2025
     fecha_hoy = datetime.now().date()  # Fecha actual del sistema
 
-    print(f"📅 Rango de fechas: {fecha_inicio} hasta {fecha_fin}")
-    print(f"📆 Fecha de hoy: {fecha_hoy}")
-    print(f"🎯 Presentes desde: {fecha_inicio} hasta {fecha_hoy}")
+    print(f" Rango de fechas: {fecha_inicio} hasta {fecha_fin}")
+    print(f" Fecha de hoy: {fecha_hoy}")
+    print(f" Presentes desde: {fecha_inicio} hasta {fecha_hoy}")
 
     if fecha_hoy < fecha_fin:
-        print(f"❌ Faltas desde: {fecha_hoy + timedelta(days=1)} hasta {fecha_fin}")
+        print(f" Faltas desde: {fecha_hoy + timedelta(days=1)} hasta {fecha_fin}")
     else:
-        print("ℹ️  Ya pasó la fecha final, todas las asistencias serán presentes")
+        print("ℹ  Ya pasó la fecha final, todas las asistencias serán presentes")
 
     with transaction.atomic():
         asistencias_creadas = 0
@@ -1711,7 +1710,7 @@ def insertar_asistencia_profesor():
             | Q(grupos_laboratorio__isnull=False)
         ).distinct()
 
-        print(f"👨‍🏫 Procesando {profesores.count()} profesores...")
+        print(f" Procesando {profesores.count()} profesores...")
 
         for profesor in profesores:
             try:
@@ -1721,7 +1720,7 @@ def insertar_asistencia_profesor():
                 horarios_profesor = obtener_horarios_profesor(profesor)
 
                 if not horarios_profesor:
-                    print(f"   ⚠️  No se encontraron horarios para {profesor.nombre}")
+                    print(f"     No se encontraron horarios para {profesor.nombre}")
                     continue
 
                 # Generar asistencias para cada fecha en el rango
@@ -1736,14 +1735,14 @@ def insertar_asistencia_profesor():
 
                     fecha_actual += timedelta(days=1)
 
-                print(f"   ✅ Asistencias generadas para {profesor.nombre}")
+                print(f"    Asistencias generadas para {profesor.nombre}")
 
             except Exception as e:
-                print(f"   ❌ Error procesando profesor {profesor.nombre}: {str(e)}")
+                print(f"    Error procesando profesor {profesor.nombre}: {str(e)}")
                 errores += 1
                 continue
 
-        print(f"\n📊 RESUMEN FINAL:")
+        print(f"\n RESUMEN FINAL:")
         print(f"   Asistencias creadas: {asistencias_creadas}")
         print(f"   Errores: {errores}")
 
@@ -1861,11 +1860,11 @@ def generar_asistencias_fecha_profesor(profesor, fecha, horarios_profesor, fecha
                 curso_nombre = hora.grupo_laboratorio.grupo_teoria.curso.nombre
                 grupo_info = f"L-{hora.grupo_laboratorio.grupo}"
 
-            estado_display = "✅ PRESENTE" if estado == "P" else "❌ FALTA"
+            estado_display = " PRESENTE" if estado == "P" else "❌ FALTA"
             print(f"      {fecha} - {curso_nombre} {grupo_info} - {estado_display}")
 
         except Exception as e:
-            print(f"      ❌ Error en asistencia {fecha}: {str(e)}")
+            print(f"       Error en asistencia {fecha}: {str(e)}")
             continue
 
     return asistencias_creadas
@@ -1884,16 +1883,16 @@ def mostrar_estadisticas_asistencias_profesores():
     presentes = AsistenciaProfesor.objects.filter(estado="P").count()
     faltas = AsistenciaProfesor.objects.filter(estado="F").count()
 
-    print(f"🎯 Total de asistencias: {total_asistencias}")
-    print(f"✅ Presentes (hasta {datetime.now().date()}): {presentes}")
-    print(f"❌ Faltas (desde {datetime.now().date() + timedelta(days=1)}): {faltas}")
+    print(f" Total de asistencias: {total_asistencias}")
+    print(f" Presentes (hasta {datetime.now().date()}): {presentes}")
+    print(f" Faltas (desde {datetime.now().date() + timedelta(days=1)}): {faltas}")
 
     if total_asistencias > 0:
         porcentaje_presente = (presentes / total_asistencias) * 100
-        print(f"📈 Porcentaje de asistencia: {porcentaje_presente:.1f}%")
+        print(f" Porcentaje de asistencia: {porcentaje_presente:.1f}%")
 
     # Estadísticas por profesor - CORREGIDO: usar 'asistencias' en lugar de 'asistencias_profesor'
-    print(f"\n👨‍🏫 Distribución por profesores:")
+    print(f"\n Distribución por profesores:")
     profesores_con_asistencia = Profesor.objects.filter(
         asistencias__isnull=False
     ).distinct()
@@ -1920,12 +1919,12 @@ def limpiar_asistencias_profesores():
     """
     Elimina todas las asistencias de profesores (solo para testing)
     """
-    print("⚠️  ELIMINANDO TODAS LAS ASISTENCIAS DE PROFESORES...")
+    print("  ELIMINANDO TODAS LAS ASISTENCIAS DE PROFESORES...")
 
     count = AsistenciaProfesor.objects.count()
     AsistenciaProfesor.objects.all().delete()
 
-    print(f"🗑️  Eliminadas {count} asistencias de profesores")
+    print(f"  Eliminadas {count} asistencias de profesores")
 
 
 # Función principal
@@ -1933,19 +1932,19 @@ def ejecutar_generacion_asistencias_profesores():
     """
     Función principal para ejecutar la generación de asistencias de profesores
     """
-    print("🚀 INICIANDO GENERACIÓN MASIVA DE ASISTENCIAS DE PROFESORES 2025")
+    print(" INICIANDO GENERACIÓN MASIVA DE ASISTENCIAS DE PROFESORES 2025")
     print("=" * 70)
 
     # Mostrar estadísticas antes
     mostrar_estadisticas_asistencias_profesores()
 
     # Ejecutar generación
-    print("\n🔄 GENERANDO ASISTENCIAS DE PROFESORES...")
+    print("\n GENERANDO ASISTENCIAS DE PROFESORES...")
     asistencias_creadas = insertar_asistencia_profesor()
 
     # Mostrar estadísticas después
     mostrar_estadisticas_asistencias_profesores()
 
-    print(f"\n✅ Proceso completado. Asistencias creadas: {asistencias_creadas}")
+    print(f"\n Proceso completado. Asistencias creadas: {asistencias_creadas}")
 
     return asistencias_creadas
