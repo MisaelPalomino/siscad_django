@@ -21,6 +21,7 @@ from .models import (
     Hora,
     MatriculaLaboratorio,
     AsistenciaAlumno,
+    AsistenciaProfesor,
 )
 from pathlib import Path
 
@@ -1412,6 +1413,7 @@ def generar_data():
     cargar_horarios_desde_excel()
     insertar_matriculas_laboratorio()
     ejecutar_generacion_asistencias()
+    ejecutar_generacion_asistencias_profesores()
 
 
 from datetime import datetime, date, timedelta
@@ -1671,5 +1673,279 @@ def ejecutar_generacion_asistencias():
     mostrar_estadisticas_asistencias()
 
     print(f"\n Proceso completado. Asistencias creadas: {asistencias_creadas}")
+
+    return asistencias_creadas
+
+
+def insertar_asistencia_profesor():
+    """
+    Función para pregenerar asistencias de profesores desde el 2 de septiembre 2025 hasta el 25 de diciembre 2025.
+    - Desde 02-09-2025 hasta hoy: Todas las asistencias como Presente
+    - Desde mañana hasta 25-12-2025: Todas las asistencias como Falta
+    - Solo primera hora de cada curso por día (evita duplicados en horas seguidas)
+    """
+    print("🚀 INICIANDO GENERACIÓN DE ASISTENCIAS DE PROFESORES...")
+
+    # Fechas importantes
+    fecha_inicio = date(2025, 9, 2)  # 2 de septiembre de 2025
+    fecha_fin = date(2025, 12, 25)  # 25 de diciembre de 2025
+    fecha_hoy = datetime.now().date()  # Fecha actual del sistema
+
+    print(f"📅 Rango de fechas: {fecha_inicio} hasta {fecha_fin}")
+    print(f"📆 Fecha de hoy: {fecha_hoy}")
+    print(f"🎯 Presentes desde: {fecha_inicio} hasta {fecha_hoy}")
+
+    if fecha_hoy < fecha_fin:
+        print(f"❌ Faltas desde: {fecha_hoy + timedelta(days=1)} hasta {fecha_fin}")
+    else:
+        print("ℹ️  Ya pasó la fecha final, todas las asistencias serán presentes")
+
+    with transaction.atomic():
+        asistencias_creadas = 0
+        errores = 0
+
+        # Obtener todos los profesores con horarios asignados
+        profesores = Profesor.objects.filter(
+            Q(grupos_teoria__isnull=False)
+            | Q(grupos_practica__isnull=False)
+            | Q(grupos_laboratorio__isnull=False)
+        ).distinct()
+
+        print(f"👨‍🏫 Procesando {profesores.count()} profesores...")
+
+        for profesor in profesores:
+            try:
+                print(f"\n🎓 Procesando profesor: {profesor.nombre}")
+
+                # Obtener horarios del profesor (teoría, práctica y laboratorio)
+                horarios_profesor = obtener_horarios_profesor(profesor)
+
+                if not horarios_profesor:
+                    print(f"   ⚠️  No se encontraron horarios para {profesor.nombre}")
+                    continue
+
+                # Generar asistencias para cada fecha en el rango
+                fecha_actual = fecha_inicio
+                while fecha_actual <= fecha_fin:
+                    # Solo días de semana (Lunes a Viernes)
+                    if fecha_actual.weekday() < 5:  # 0=Lunes, 4=Viernes
+                        asistencias_fecha = generar_asistencias_fecha_profesor(
+                            profesor, fecha_actual, horarios_profesor, fecha_hoy
+                        )
+                        asistencias_creadas += asistencias_fecha
+
+                    fecha_actual += timedelta(days=1)
+
+                print(f"   ✅ Asistencias generadas para {profesor.nombre}")
+
+            except Exception as e:
+                print(f"   ❌ Error procesando profesor {profesor.nombre}: {str(e)}")
+                errores += 1
+                continue
+
+        print(f"\n📊 RESUMEN FINAL:")
+        print(f"   Asistencias creadas: {asistencias_creadas}")
+        print(f"   Errores: {errores}")
+
+        return asistencias_creadas
+
+
+def obtener_horarios_profesor(profesor):
+    """
+    Obtiene todos los horarios (teoría, práctica, laboratorio) de un profesor
+    """
+    horarios = (
+        Hora.objects.filter(
+            Q(grupo_teoria__profesor=profesor)
+            | Q(grupo_practica__profesor=profesor)
+            | Q(grupo_laboratorio__profesor=profesor)
+        )
+        .select_related(
+            "grupo_teoria__curso",
+            "grupo_practica__grupo_teoria__curso",
+            "grupo_laboratorio__grupo_teoria__curso",
+        )
+        .order_by("dia", "hora_inicio")
+    )
+
+    return horarios
+
+
+def generar_asistencias_fecha_profesor(profesor, fecha, horarios_profesor, fecha_hoy):
+    """
+    Genera asistencias para un profesor en una fecha específica
+    """
+    asistencias_creadas = 0
+    dia_semana = fecha.strftime("%A")
+
+    # Mapeo de días en español a códigos de la base de datos
+    dias_map = {
+        "Monday": "L",
+        "Tuesday": "M",
+        "Wednesday": "X",
+        "Thursday": "J",
+        "Friday": "V",
+    }
+
+    dia_codigo = dias_map.get(dia_semana)
+    if not dia_codigo:
+        return 0
+
+    # Filtrar horarios para este día
+    horarios_dia = [h for h in horarios_profesor if h.dia == dia_codigo]
+
+    if not horarios_dia:
+        return 0
+
+    # Determinar estado según la fecha
+    estado = (
+        "P" if fecha <= fecha_hoy else "F"
+    )  # Presente hasta hoy, Falta desde mañana
+
+    # Agrupar horarios por curso para evitar duplicados en horas seguidas
+    horarios_procesados = set()
+
+    for hora in horarios_dia:
+        try:
+            # Identificar el curso para agrupar
+            if hora.grupo_teoria:
+                curso_id = hora.grupo_teoria.curso_id
+                tipo = "T"
+                grupo_id = hora.grupo_teoria_id
+            elif hora.grupo_practica:
+                curso_id = hora.grupo_practica.grupo_teoria.curso_id
+                tipo = "P"
+                grupo_id = hora.grupo_practica_id
+            elif hora.grupo_laboratorio:
+                curso_id = hora.grupo_laboratorio.grupo_teoria.curso_id
+                tipo = "L"
+                grupo_id = hora.grupo_laboratorio_id
+            else:
+                continue
+
+            # Clave única para el curso y grupo en este día (evita horas seguidas del mismo grupo)
+            clave_curso_grupo = f"{curso_id}_{grupo_id}_{dia_codigo}_{tipo}"
+
+            # Si ya procesamos este curso+grupo en este día, saltar (solo primera hora)
+            if clave_curso_grupo in horarios_procesados:
+                continue
+
+            # Marcar como procesado
+            horarios_procesados.add(clave_curso_grupo)
+
+            # Verificar si ya existe esta asistencia
+            asistencia_existente = AsistenciaProfesor.objects.filter(
+                profesor=profesor, fecha=fecha, hora=hora
+            ).exists()
+
+            if asistencia_existente:
+                continue
+
+            # Crear la asistencia
+            asistencia = AsistenciaProfesor(
+                profesor=profesor, fecha=fecha, estado=estado, hora=hora
+            )
+            asistencia.save()
+
+            asistencias_creadas += 1
+
+            # Debug informativo
+            curso_nombre = ""
+            if hora.grupo_teoria:
+                curso_nombre = hora.grupo_teoria.curso.nombre
+                grupo_info = f"T-{hora.grupo_teoria.turno}"
+            elif hora.grupo_practica:
+                curso_nombre = hora.grupo_practica.grupo_teoria.curso.nombre
+                grupo_info = f"P-{hora.grupo_practica.turno}"
+            elif hora.grupo_laboratorio:
+                curso_nombre = hora.grupo_laboratorio.grupo_teoria.curso.nombre
+                grupo_info = f"L-{hora.grupo_laboratorio.grupo}"
+
+            estado_display = "✅ PRESENTE" if estado == "P" else "❌ FALTA"
+            print(f"      {fecha} - {curso_nombre} {grupo_info} - {estado_display}")
+
+        except Exception as e:
+            print(f"      ❌ Error en asistencia {fecha}: {str(e)}")
+            continue
+
+    return asistencias_creadas
+
+
+# Función para mostrar estadísticas de asistencias de profesores - CORREGIDA
+def mostrar_estadisticas_asistencias_profesores():
+    """
+    Muestra estadísticas de las asistencias generadas para profesores
+    """
+    print("\n" + "=" * 60)
+    print("📊 ESTADÍSTICAS DE ASISTENCIAS DE PROFESORES 2025")
+    print("=" * 60)
+
+    total_asistencias = AsistenciaProfesor.objects.count()
+    presentes = AsistenciaProfesor.objects.filter(estado="P").count()
+    faltas = AsistenciaProfesor.objects.filter(estado="F").count()
+
+    print(f"🎯 Total de asistencias: {total_asistencias}")
+    print(f"✅ Presentes (hasta {datetime.now().date()}): {presentes}")
+    print(f"❌ Faltas (desde {datetime.now().date() + timedelta(days=1)}): {faltas}")
+
+    if total_asistencias > 0:
+        porcentaje_presente = (presentes / total_asistencias) * 100
+        print(f"📈 Porcentaje de asistencia: {porcentaje_presente:.1f}%")
+
+    # Estadísticas por profesor - CORREGIDO: usar 'asistencias' en lugar de 'asistencias_profesor'
+    print(f"\n👨‍🏫 Distribución por profesores:")
+    profesores_con_asistencia = Profesor.objects.filter(
+        asistencias__isnull=False
+    ).distinct()
+
+    for profesor in profesores_con_asistencia[:10]:  # Mostrar solo primeros 10
+        asistencias_profesor = profesor.asistencias.count()
+        presentes_profesor = profesor.asistencias.filter(estado="P").count()
+
+        porcentaje_profesor = (
+            (presentes_profesor / asistencias_profesor * 100)
+            if asistencias_profesor > 0
+            else 0
+        )
+        print(
+            f"   {profesor.nombre}: {asistencias_profesor} registros ({presentes_profesor} presentes - {porcentaje_profesor:.1f}%)"
+        )
+
+    if profesores_con_asistencia.count() > 10:
+        print(f"   ... y {profesores_con_asistencia.count() - 10} profesores más")
+
+
+# Función para limpiar asistencias de profesores (solo testing)
+def limpiar_asistencias_profesores():
+    """
+    Elimina todas las asistencias de profesores (solo para testing)
+    """
+    print("⚠️  ELIMINANDO TODAS LAS ASISTENCIAS DE PROFESORES...")
+
+    count = AsistenciaProfesor.objects.count()
+    AsistenciaProfesor.objects.all().delete()
+
+    print(f"🗑️  Eliminadas {count} asistencias de profesores")
+
+
+# Función principal
+def ejecutar_generacion_asistencias_profesores():
+    """
+    Función principal para ejecutar la generación de asistencias de profesores
+    """
+    print("🚀 INICIANDO GENERACIÓN MASIVA DE ASISTENCIAS DE PROFESORES 2025")
+    print("=" * 70)
+
+    # Mostrar estadísticas antes
+    mostrar_estadisticas_asistencias_profesores()
+
+    # Ejecutar generación
+    print("\n🔄 GENERANDO ASISTENCIAS DE PROFESORES...")
+    asistencias_creadas = insertar_asistencia_profesor()
+
+    # Mostrar estadísticas después
+    mostrar_estadisticas_asistencias_profesores()
+
+    print(f"\n✅ Proceso completado. Asistencias creadas: {asistencias_creadas}")
 
     return asistencias_creadas
