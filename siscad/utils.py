@@ -4,6 +4,7 @@ import datetime
 import os
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.utils.dateparse import parse_time
 from .models import (
     Alumno,
     Curso,
@@ -15,6 +16,7 @@ from .models import (
     Nota,
     GrupoLaboratorio,
     Secretaria,
+    Hora,
 )
 from pathlib import Path
 
@@ -676,24 +678,6 @@ def insertar_asistencia_profesor():
 def insertar_asistencia_alumno():
     pass
 
-
-def insertar_data_excel():
-    insertar_alumnos_excel("siscad/datos/Alumnos.xlsx")
-    insertar_profesores_excel("siscad/datos/TablaProfesores.xlsx")
-    insertar_secretarias_excel("siscad/datos/TablaSecretarias.xlsx")
-    insertar_aulas_excel("siscad/datos/TablaAulas.xlsx")
-    insertar_cursos_excel("siscad/datos/TablaCursosHoras.xlsx")
-
-
-def generar_data():
-    insertar_matriculas_curso()
-    insertar_grupos_teoria()
-    insertar_grupos_practica()
-    insertar_notas()
-    insertar_grupos_laboratorio()
-    pass
-
-
 # DÍAS y TURNOS
 DIAS = ["L", "M", "X", "J", "V"]  # Lunes-Viernes
 
@@ -1128,7 +1112,7 @@ def generar_horarios_modeloA():
     base_dir = settings.BASE_DIR
     ruta_directorio = str(base_dir) + "/siscad"
     os.makedirs(ruta_directorio, exist_ok=True)
-    ruta_archivo = ruta_directorio + "/horarios_debug.xlsx"
+    ruta_archivo = ruta_directorio + "/datos/horarios_debug.xlsx"
 
     df = pd.DataFrame(
         datos,
@@ -1185,3 +1169,128 @@ def generar_horarios_modeloA():
             f"⚠️ Se detectaron {len(problemas)} problemas. Revisa la hoja 'problemas' en el Excel."
         )
     return ruta_archivo
+
+
+def cargar_horarios_desde_excel(ruta_excel="siscad/datos/horarios_debug.xlsx"):
+    """
+    Lee el archivo Excel generado y crea registros en el modelo Hora.
+    """
+    try:
+        df = pd.read_excel(ruta_excel)
+    except Exception as e:
+        print(f"❌ Error al leer el archivo Excel: {e}")
+        return
+
+    tipo_map = {"Teoría": "T", "Práctica": "P", "Laboratorio": "L", "Receso": "R"}
+
+    creados = 0
+    omitidos = 0
+
+    with transaction.atomic():
+        for _, row in df.iterrows():
+            try:
+                tipo_sesion_humano = row.get("Tipo Sesión")
+                tipo_sesion = tipo_map.get(tipo_sesion_humano)
+
+                if tipo_sesion is None:
+                    print(f"⚠️ Tipo de sesión desconocido en fila: {tipo_sesion_humano}")
+                    omitidos += 1
+                    continue
+
+                # Normalizar aula como string
+                aula_nombre = str(row.get("Aula", "")).strip()
+                if aula_nombre.endswith(".0"):
+                    aula_nombre = aula_nombre[:-2]  # Elimina .0
+
+                aula = Aula.objects.filter(nombre=aula_nombre).first()
+                if not aula:
+                    print(f"⚠️ Aula no encontrada: {aula_nombre}")
+                    omitidos += 1
+                    continue
+
+                # Manejo de receso
+                if tipo_sesion == "R":
+                    hora_inicio = datetime.datetime.strptime(
+                        str(row["Inicio"]), "%H:%M"
+                    ).time()
+                    hora_fin = datetime.datetime.strptime(
+                        str(row["Fin"]), "%H:%M"
+                    ).time()
+                    Hora.objects.create(
+                        dia=row["Día"],
+                        hora_inicio=hora_inicio,
+                        hora_fin=hora_fin,
+                        tipo="R",
+                        aula=aula,
+                    )
+                    creados += 1
+                    continue
+
+                # Buscar el grupo según el tipo
+                grupo_obj = None
+                if tipo_sesion == "T":
+                    grupo_obj = GrupoTeoria.objects.filter(
+                        id=row.get("Grupo (Teoría id)")
+                    ).first()
+                elif tipo_sesion == "P":
+                    grupo_obj = GrupoPractica.objects.filter(
+                        id=row.get("Grupo (Práctica id)")
+                    ).first()
+                elif tipo_sesion == "L":
+                    grupo_obj = GrupoLaboratorio.objects.filter(
+                        id=row.get("Grupo (Lab id)")
+                    ).first()
+
+                if not grupo_obj:
+                    print(f"⚠️ No se encontró el grupo para la fila: {row}")
+                    omitidos += 1
+                    continue
+
+                hora_inicio = datetime.datetime.strptime(
+                    str(row["Inicio"]), "%H:%M"
+                ).time()
+                hora_fin = datetime.datetime.strptime(str(row["Fin"]), "%H:%M").time()
+
+                hora = Hora(
+                    dia=row["Día"],
+                    hora_inicio=hora_inicio,
+                    hora_fin=hora_fin,
+                    tipo=tipo_sesion,
+                    aula=aula,
+                )
+
+                if tipo_sesion == "T":
+                    hora.grupo_teoria = grupo_obj
+                elif tipo_sesion == "P":
+                    hora.grupo_practica = grupo_obj
+                elif tipo_sesion == "L":
+                    hora.grupo_laboratorio = grupo_obj
+
+                hora.save()
+                creados += 1
+
+            except Exception as e:
+                print(f"❌ Error al procesar fila: {row}. Error: {e}")
+                omitidos += 1
+                continue
+
+    print(f"✅ Horarios insertados: {creados}")
+    print(f"ℹ️ Filas omitidas: {omitidos}")
+
+def insertar_data_excel():
+    insertar_alumnos_excel("siscad/datos/Alumnos.xlsx")
+    insertar_profesores_excel("siscad/datos/TablaProfesores.xlsx")
+    insertar_secretarias_excel("siscad/datos/TablaSecretarias.xlsx")
+    insertar_aulas_excel("siscad/datos/TablaAulas.xlsx")
+    insertar_cursos_excel("siscad/datos/TablaCursosHoras.xlsx")
+
+
+def generar_data():
+    insertar_matriculas_curso()
+    insertar_grupos_teoria()
+    insertar_grupos_practica()
+    insertar_notas()
+    insertar_grupos_laboratorio()
+    generar_horarios_modeloA()
+    cargar_horarios_desde_excel()
+    pass

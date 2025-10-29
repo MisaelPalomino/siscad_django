@@ -30,6 +30,11 @@ urlpatterns = [
         name="listar_alumnos_grupo_laboratorio",
     ),
     path(
+        "secretaria/visualizar-horarios-aulas/",
+        views.visualizar_horarios_aulas,
+        name="visualizar_horarios_aulas",
+    ),
+    path(
         "alumno/visualizar-notas/",
         views.visualizar_notas,
         name="visualizar_notas",

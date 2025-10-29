@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Horarios por Aula</title>
+</head>
+<body>
+
+<h1>📌 Horario de Aulas</h1>
+
+{% for aula, bloques in tabla_horarios.items %}
+    <h2>Aula: {{ aula }}</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                {% for dia, nombre in dias_lista %}
+                    <th>{{ nombre }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in bloques %}
+                <tr>
+                    <td>{{ fila.bloque }}</td>
+                    {% for dia, valor in fila.dias %}
+                        {% if valor %}
+                            <td class="celda-ocupada">{{ valor }}</td>
+                        {% else %}
+                            <td class="celda-vacia">-</td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% empty %}
+    <p>No hay horarios registrados.</p>
+{% endfor %}
+
+</body>
+</html>
