@@ -54,4 +54,9 @@ urlpatterns = [
         views.visualizar_asistencias_alumno,
         name="visualizar_asistencias_alumno",
     ),
+    path(
+        "profesor/visualizar-horario-profesor/",
+        views.visualizar_horario_profesor,
+        name="visualizar_horario_profesor",
+    ),
 ]

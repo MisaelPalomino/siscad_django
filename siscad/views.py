@@ -1103,7 +1103,170 @@ def calcular_estadisticas_asistencias(asistencias):
 
 # =======================Vista de Profesor====================================================
 def inicio_profesor(request):
-    return render(request, "siscad/profesor/menu.html")
+    rol = request.session.get("rol")
+
+    if rol != "Profesor":
+        request.session["rol"] = "Ninguno"
+        return redirect("login")
+
+    nombre = request.session.get("nombre")
+    return render(request, "siscad/profesor/menu.html", {"nombre": nombre, "rol": rol})
+
+
+def visualizar_horario_profesor(request):
+    # 1. Obtener el profesor logueado usando el email de la sesión
+    if "email" not in request.session:
+        return redirect("login")
+
+    email = request.session["email"]
+
+    try:
+        profesor = Profesor.objects.get(email=email)
+    except Profesor.DoesNotExist:
+        return redirect("login")
+    except Profesor.MultipleObjectsReturned:
+        profesor = Profesor.objects.filter(email=email).first()
+
+    print(f"DEBUG: Profesor encontrado: {profesor.nombre}")
+
+    # 2. Obtener todos los horarios del profesor (teoría, práctica, laboratorio)
+    horarios = (
+        Hora.objects.select_related(
+            "aula",
+            "grupo_teoria__curso",
+            "grupo_practica__grupo_teoria__curso",
+            "grupo_laboratorio__grupo_teoria__curso",
+        )
+        .filter(
+            Q(grupo_teoria__profesor=profesor)
+            | Q(grupo_practica__profesor=profesor)
+            | Q(grupo_laboratorio__profesor=profesor)
+        )
+        .order_by("dia", "hora_inicio")
+    )
+
+    print(f"DEBUG: Horarios encontrados para el profesor: {horarios.count()}")
+
+    # Debug detallado de horarios
+    for h in horarios:
+        if h.grupo_teoria:
+            tipo = "Teoría"
+            curso_nombre = h.grupo_teoria.curso.nombre
+            grupo_info = f"T-{h.grupo_teoria.turno}"
+        elif h.grupo_practica:
+            tipo = "Práctica"
+            curso_nombre = h.grupo_practica.grupo_teoria.curso.nombre
+            grupo_info = f"P-{h.grupo_practica.turno}"
+        elif h.grupo_laboratorio:
+            tipo = "Laboratorio"
+            curso_nombre = h.grupo_laboratorio.grupo_teoria.curso.nombre
+            grupo_info = f"L-{h.grupo_laboratorio.grupo}"
+        else:
+            tipo = "Otro"
+            curso_nombre = "Desconocido"
+            grupo_info = ""
+
+        print(
+            f"DEBUG Horario Profesor: {h.dia} {h.hora_inicio}-{h.hora_fin} - {tipo}: {curso_nombre} {grupo_info} - Aula: {h.aula.nombre if h.aula else 'Sin aula'}"
+        )
+
+    # 3. Construir estructura para mostrar
+    dias_lista = [
+        ("L", "Lunes"),
+        ("M", "Martes"),
+        ("X", "Miércoles"),
+        ("J", "Jueves"),
+        ("V", "Viernes"),
+    ]
+
+    # Crear estructura de datos
+    tabla_horarios = {}
+    for h in horarios:
+        bloque = f"{h.hora_inicio.strftime('%H:%M')} - {h.hora_fin.strftime('%H:%M')}"
+        dia = h.dia
+
+        # Usar "Horario del Profesor" como clave única
+        aula_key = "Horario del Profesor"
+
+        if aula_key not in tabla_horarios:
+            tabla_horarios[aula_key] = {}
+
+        if bloque not in tabla_horarios[aula_key]:
+            tabla_horarios[aula_key][bloque] = {d: "" for d, _ in dias_lista}
+
+        # Construir información del curso
+        if h.grupo_teoria:
+            curso = h.grupo_teoria.curso.nombre
+            grupo = f"T-{h.grupo_teoria.turno}"
+            tipo_info = "Teoría"
+        elif h.grupo_practica:
+            curso = h.grupo_practica.grupo_teoria.curso.nombre
+            grupo = f"P-{h.grupo_practica.turno}"
+            tipo_info = "Práctica"
+        elif h.grupo_laboratorio:
+            curso = h.grupo_laboratorio.grupo_teoria.curso.nombre
+            grupo = f"L-{h.grupo_laboratorio.grupo}"
+            tipo_info = "Laboratorio"
+        else:
+            curso = "Sin asignar"
+            grupo = ""
+            tipo_info = ""
+
+        aula_info = f" ({h.aula.nombre})" if h.aula else ""
+        info_curso = f"{curso} {grupo} - {tipo_info}{aula_info}"
+
+        tabla_horarios[aula_key][bloque][dia] = info_curso
+
+    # Ordenar por hora
+    for aula in tabla_horarios:
+        tabla_horarios[aula] = dict(
+            sorted(tabla_horarios[aula].items(), key=lambda x: x[0])
+        )
+
+    # 4. Obtener estadísticas del profesor
+    estadisticas = {
+        "total_horarios": horarios.count(),
+        "total_teoria": horarios.filter(grupo_teoria__profesor=profesor).count(),
+        "total_practica": horarios.filter(grupo_practica__profesor=profesor).count(),
+        "total_laboratorio": horarios.filter(
+            grupo_laboratorio__profesor=profesor
+        ).count(),
+        "cursos_unicos": len(
+            set(
+                [h.grupo_teoria.curso_id for h in horarios if h.grupo_teoria]
+                + [
+                    h.grupo_practica.grupo_teoria.curso_id
+                    for h in horarios
+                    if h.grupo_practica
+                ]
+                + [
+                    h.grupo_laboratorio.grupo_teoria.curso_id
+                    for h in horarios
+                    if h.grupo_laboratorio
+                ]
+            )
+        ),
+        "reservas_disponibles": profesor.cantidad_reservas,
+    }
+
+    # 5. Crear la estructura final
+    context = {
+        "profesor": profesor,
+        "dias_lista": dias_lista,
+        "tabla_horarios": {
+            aula: [
+                {
+                    "bloque": bloque,
+                    "dias": [(dia, dias_data[dia]) for dia, _ in dias_lista],
+                }
+                for bloque, dias_data in bloques.items()
+            ]
+            for aula, bloques in tabla_horarios.items()
+        },
+        "estadisticas": estadisticas,
+    }
+
+    return render(request, "siscad/profesor/visualizar_horario_profesor.html", context)
 
 
 # =======================Vista de Admin====================================================
