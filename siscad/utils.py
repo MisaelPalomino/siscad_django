@@ -400,7 +400,7 @@ def insertar_matriculas_curso():
         semestre = alumno.calcular_semestre()
         if semestre not in alumnos_por_semestre:
             alumnos_por_semestre[semestre] = []
-        alumnos_poor_semestre[semestre].append(alumno)
+        alumnos_por_semestre[semestre].append(alumno)
 
     cursos_por_semestre = {}
     for curso in cursos:
@@ -1386,14 +1386,6 @@ def insertar_matriculas_laboratorio():
         return matriculas_creadas
 
 
-def insertar_asistencia_profesor():
-    pass
-
-
-def insertar_asistencia_alumno():
-    pass
-
-
 def insertar_data_excel():
     insertar_alumnos_excel("siscad/datos/Alumnos.xlsx")
     insertar_profesores_excel("siscad/datos/TablaProfesores.xlsx")
@@ -1410,14 +1402,10 @@ def generar_data():
     insertar_grupos_laboratorio()
     generar_horarios_modeloA()
     cargar_horarios_desde_excel()
-    insertar_matriculas_laboratorio()
+    # insertar_matriculas_laboratorio()
     ejecutar_generacion_asistencias()
     ejecutar_generacion_asistencias_profesores()
 
-
-from datetime import datetime, date, timedelta
-from django.db import transaction
-from django.db.models import Q
 
 
 def insertar_asistencia_alumno():
@@ -1429,14 +1417,14 @@ def insertar_asistencia_alumno():
     print(" INICIANDO GENERACIÓN DE ASISTENCIAS AUTOMÁTICAS 2025...")
 
     # Fechas importantes CORREGIDAS para 2025
-    fecha_inicio = date(2025, 9, 2)  # 2 de septiembre de 2025
-    fecha_fin = date(2025, 12, 25)  # 25 de diciembre de 2025
-    fecha_hoy = date(2025, 10, 28)  # 28 de octubre de 2025 (hoy)
+    fecha_inicio = datetime.date(2025, 9, 2)  # 2 de septiembre de 2025
+    fecha_fin = datetime.date(2025, 12, 25)  # 25 de diciembre de 2025
+    fecha_hoy = datetime.date(2025, 10, 28)  # 28 de octubre de 2025 (hoy)
 
     print(f" Rango de fechas: {fecha_inicio} hasta {fecha_fin}")
     print(f" Fecha de hoy: {fecha_hoy}")
     print(f" Presentes desde: {fecha_inicio} hasta {fecha_hoy}")
-    print(f" Faltas desde: {fecha_hoy + timedelta(days=1)} hasta {fecha_fin}")
+    print(f" Faltas desde: {fecha_hoy + datetime.timedelta(days=1)} hasta {fecha_fin}")
 
     with transaction.atomic():
         asistencias_creadas = 0
@@ -1470,7 +1458,7 @@ def insertar_asistencia_alumno():
                         )
                         asistencias_creadas += asistencias_fecha
 
-                    fecha_actual += timedelta(days=1)
+                    fecha_actual += datetime.timedelta(days=1)
 
                 print(f"    Asistencias generadas para {alumno.nombre}")
 
@@ -1530,7 +1518,7 @@ def obtener_horarios_alumno(alumno):
 
 def generar_asistencias_fecha(alumno, fecha, horarios_alumno, fecha_hoy):
     """
-    Genera asistencias para un alumno en una fecha específica
+    Genera asistencias para un alumno en una fecha específica (solo teoría y práctica)
     """
     asistencias_creadas = 0
     dia_semana = fecha.strftime("%A")
@@ -1564,9 +1552,6 @@ def generar_asistencias_fecha(alumno, fecha, horarios_alumno, fecha_hoy):
             elif hora.grupo_practica:
                 curso_id = hora.grupo_practica.grupo_teoria.curso_id
                 tipo = "P"
-            elif hora.grupo_laboratorio:
-                curso_id = hora.grupo_laboratorio.grupo_teoria.curso_id
-                tipo = "L"
             else:
                 continue
 
@@ -1577,6 +1562,7 @@ def generar_asistencias_fecha(alumno, fecha, horarios_alumno, fecha_hoy):
 
             horarios_procesados.add(clave_curso)
 
+            # Evitar duplicados
             asistencia_existente = AsistenciaAlumno.objects.filter(
                 alumno=alumno, fecha=fecha, hora=hora
             ).exists()
@@ -1584,20 +1570,18 @@ def generar_asistencias_fecha(alumno, fecha, horarios_alumno, fecha_hoy):
             if asistencia_existente:
                 continue
 
+            # Crear asistencia
             asistencia = AsistenciaAlumno(
                 alumno=alumno, fecha=fecha, estado=estado, hora=hora
             )
             asistencia.save()
-
             asistencias_creadas += 1
 
-            curso_nombre = ""
-            if hora.grupo_teoria:
-                curso_nombre = hora.grupo_teoria.curso.nombre
-            elif hora.grupo_practica:
-                curso_nombre = hora.grupo_practica.grupo_teoria.curso.nombre
-            elif hora.grupo_laboratorio:
-                curso_nombre = hora.grupo_laboratorio.grupo_teoria.curso.nombre
+            curso_nombre = (
+                hora.grupo_teoria.curso.nombre
+                if hora.grupo_teoria
+                else hora.grupo_practica.grupo_teoria.curso.nombre
+            )
 
             estado_display = " PRESENTE" if estado == "P" else " FALTA"
             print(f"      {fecha} - {curso_nombre} - {estado_display}")
@@ -1686,16 +1670,16 @@ def insertar_asistencia_profesor():
     print("🚀 INICIANDO GENERACIÓN DE ASISTENCIAS DE PROFESORES...")
 
     # Fechas importantes
-    fecha_inicio = date(2025, 9, 2)  # 2 de septiembre de 2025
-    fecha_fin = date(2025, 12, 25)  # 25 de diciembre de 2025
-    fecha_hoy = datetime.now().date()  # Fecha actual del sistema
+    fecha_inicio = datetime.date(2025, 9, 2)  # 2 de septiembre de 2025
+    fecha_fin = datetime.date(2025, 12, 25)  # 25 de diciembre de 2025
+    fecha_hoy = datetime.datetime.now().date()  # Fecha actual del sistema
 
     print(f" Rango de fechas: {fecha_inicio} hasta {fecha_fin}")
     print(f" Fecha de hoy: {fecha_hoy}")
     print(f" Presentes desde: {fecha_inicio} hasta {fecha_hoy}")
 
     if fecha_hoy < fecha_fin:
-        print(f" Faltas desde: {fecha_hoy + timedelta(days=1)} hasta {fecha_fin}")
+        print(f" Faltas desde: {fecha_hoy + datetime.timedelta(days=1)} hasta {fecha_fin}")
     else:
         print("ℹ  Ya pasó la fecha final, todas las asistencias serán presentes")
 
@@ -1733,7 +1717,7 @@ def insertar_asistencia_profesor():
                         )
                         asistencias_creadas += asistencias_fecha
 
-                    fecha_actual += timedelta(days=1)
+                    fecha_actual += datetime.timedelta(days=1)
 
                 print(f"    Asistencias generadas para {profesor.nombre}")
 
@@ -1884,8 +1868,8 @@ def mostrar_estadisticas_asistencias_profesores():
     faltas = AsistenciaProfesor.objects.filter(estado="F").count()
 
     print(f" Total de asistencias: {total_asistencias}")
-    print(f" Presentes (hasta {datetime.now().date()}): {presentes}")
-    print(f" Faltas (desde {datetime.now().date() + timedelta(days=1)}): {faltas}")
+    print(f" Presentes (hasta {datetime.datetime.now().date()}): {presentes}")
+    print(f" Faltas (desde {datetime.datetime.now().date() + datetime.timedelta(days=1)}): {faltas}")
 
     if total_asistencias > 0:
         porcentaje_presente = (presentes / total_asistencias) * 100

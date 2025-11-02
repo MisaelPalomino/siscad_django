@@ -9,3 +9,6 @@ from siscad.utils import *
 DROP DATABASE sistema_db;
 CREATE DATABASE sistema_db CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
 
+select * from siscad_alumno;
+select * from siscad_profesor;
+select * from siscad_secretaria;
