@@ -1375,6 +1375,7 @@ def insertar_asistencia_alumno():
 
         for alumno in alumnos:
             try:
+
                 # Obtener horarios del alumno (teoría, práctica y laboratorio)
                 horarios_alumno = obtener_horarios_alumno(alumno)
 
@@ -1393,6 +1394,7 @@ def insertar_asistencia_alumno():
                         asistencias_creadas += asistencias_fecha
 
                     fecha_actual += datetime.timedelta(days=1)
+
 
             except Exception as e:
                 print(f"    Error procesando alumno {alumno.nombre}: {str(e)}")
@@ -1604,6 +1606,8 @@ def insertar_asistencia_profesor():
     fecha_inicio = datetime.date(2025, 9, 2)  # 2 de septiembre de 2025
     fecha_fin = datetime.date(2025, 12, 25)  # 25 de diciembre de 2025
     fecha_hoy = datetime.datetime.now().date()  # Fecha actual del sistema
+
+
 
     if fecha_hoy < fecha_fin:
         print(

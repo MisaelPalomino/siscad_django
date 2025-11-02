@@ -64,6 +64,11 @@ urlpatterns = [
         name="visualizar_horario_profesor",
     ),
     path(
+        "profesor/registrar-asistencia/",
+        views.registrar_asistencia,
+        name="registrar_asistencia",
+    ),
+    path(
         "profesor/visualizar-asitencias-profesor/",
         views.visualizar_asistencias_profesor,
         name="visualizar_asistencias_profesor",

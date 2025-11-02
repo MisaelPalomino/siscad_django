@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registrar Asistencia</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { background: white; border-radius: 8px; padding: 20px; max-width: 900px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1);}
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input[type="date"], button { 
+            padding: 8px 12px; 
+            margin: 5px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            width: 100%; 
+            max-width: 300px;
+        }
+        button { 
+            background: #4b0082; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            padding: 10px 15px;
+            width: auto;
+        }
+        button:hover { background: #5a1a9a; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px;}
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left;}
+        th { background: #4b0082; color: white;}
+        tr:nth-child(even) { background: #f9f9f9;}
+        .checkbox-group { display: flex; align-items: center; gap: 8px; }
+        .checkbox-group input[type="checkbox"] { width: auto; }
+        .info-box { 
+            background: #d1ecf1; 
+            color: #0c5460; 
+            padding: 10px; 
+            border-radius: 4px; 
+            margin: 10px 0; 
+        }
+        .error-message { 
+            background: #f8d7da; 
+            color: #721c24; 
+            padding: 10px; 
+            border-radius: 4px; 
+            margin: 10px 0; 
+        }
+        .success-message { 
+            background: #d4edda; 
+            color: #155724; 
+            padding: 10px; 
+            border-radius: 4px; 
+            margin: 10px 0; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Registrar Asistencia</h1>
+
+        <!-- Formulario para seleccionar grupo y fecha -->
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="grupo_tipo">Tipo de Grupo:</label>
+                <select name="grupo_tipo" id="grupo_tipo" required>
+                    <option value="">-- Selecciona el tipo --</option>
+                    <option value="teoria" {% if request.POST.grupo_tipo == "teoria" %}selected{% endif %}>Teoría</option>
+                    <option value="practica" {% if request.POST.grupo_tipo == "practica" %}selected{% endif %}>Práctica</option>
+                    <option value="laboratorio" {% if request.POST.grupo_tipo == "laboratorio" %}selected{% endif %}>Laboratorio</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="grupo_id">Grupo:</label>
+                <select name="grupo_id" id="grupo_id" required>
+                    <option value="">-- Selecciona un grupo --</option>
+                    {% for grupo in grupos %}
+                        <option value="{{ grupo.id }}" data-tipo="{{ grupo.tipo }}"
+                            {% if request.POST.grupo_id == grupo.id|stringformat:"i" and request.POST.grupo_tipo == grupo.tipo %}selected{% endif %}>
+                            {{ grupo.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="fecha">📅 Fecha:</label>
+                <input type="date" name="fecha" id="fecha" value="{{ fecha|date:'Y-m-d' }}" required>
+                <small id="dia_semana_display" style="color: #666; margin-left: 10px;">
+                    {% if fecha %}
+                        {% with dia_numero=fecha.weekday %}
+                            {% if dia_numero == 0 %}Lunes
+                            {% elif dia_numero == 1 %}Martes
+                            {% elif dia_numero == 2 %}Miércoles
+                            {% elif dia_numero == 3 %}Jueves
+                            {% elif dia_numero == 4 %}Viernes
+                            {% elif dia_numero == 5 %}Sábado
+                            {% elif dia_numero == 6 %}Domingo
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                </small>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" name="usar_hora_actual" id="usar_hora_actual" 
+                       {% if request.POST.usar_hora_actual %}checked{% endif %}>
+                <label for="usar_hora_actual" style="display: inline; font-weight: normal;">
+                    Usar hora actual automáticamente
+                </label>
+            </div>
+
+            <button type="submit" name="mostrar_alumnos">👀 Mostrar Alumnos</button>
+        </form>
+
+        <!-- Información del grupo y hora seleccionados -->
+        {% if grupo_seleccionado %}
+            <div class="info-box">
+                <strong>Grupo seleccionado:</strong> {{ grupo_seleccionado.nombre }}<br>
+                <strong>Fecha:</strong> {{ fecha|date:"d/m/Y" }}<br>
+                {% if hora %}
+                    <strong>Hora automática:</strong> {{ hora.hora_inicio }} - {{ hora.hora_fin }} ({{ hora.get_tipo_display }})
+                {% else %}
+                    <strong>Hora:</strong> <span style="color: #dc3545;">No se encontró horario para este día</span>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <!-- Formulario para guardar asistencias -->
+        {% if alumnos_asistencia and hora %}
+            <hr>
+            
+            <h3>👥 Lista de Alumnos ({{ alumnos_asistencia|length }})</h3>
+
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="grupo_id" value="{{ request.POST.grupo_id }}">
+                <input type="hidden" name="grupo_tipo" value="{{ request.POST.grupo_tipo }}">
+                <input type="hidden" name="fecha" value="{{ fecha|date:'Y-m-d' }}">
+                {% if request.POST.usar_hora_actual %}
+                    <input type="hidden" name="usar_hora_actual" value="on">
+                {% endif %}
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Alumno</th>
+                            <th>Estado de Asistencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alumno_data in alumnos_asistencia %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ alumno_data.alumno.nombre }}</td>
+                            <td>
+                                <select name="asistencia_{{ alumno_data.alumno.id }}" class="estado-select">
+                                    <option value="P" {% if alumno_data.estado == "P" %}selected{% endif %}>✅ Presente</option>
+                                    <option value="F" {% if alumno_data.estado == "F" %}selected{% endif %}>❌ Falta</option>
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 20px;">
+                    <button type="submit" name="guardar_asistencia" style="background: #28a745;">💾 Guardar Asistencias</button>
+                    <button type="button" onclick="marcarTodos('P')" style="background: #17a2b8;">✅ Marcar Todos Presentes</button>
+                    <button type="button" onclick="marcarTodos('F')" style="background: #dc3545;">❌ Marcar Todos Faltas</button>
+                </div>
+            </form>
+        {% elif request.method == "POST" and grupo_seleccionado and not hora %}
+            <div class="error-message">
+                ⚠️ No se encontró horario para este grupo en el día seleccionado.
+            </div>
+        {% elif request.method == "POST" and not alumnos_asistencia %}
+            <div class="error-message">
+                ⚠️ No se encontraron alumnos para los criterios seleccionados.
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function marcarTodos(estado) {
+            const selects = document.querySelectorAll('.estado-select');
+            selects.forEach(select => {
+                select.value = estado;
+            });
+        }
+
+        // Actualizar día de la semana cuando cambia la fecha
+        document.getElementById('fecha').addEventListener('change', function() {
+            const fecha = new Date(this.value + 'T00:00:00');
+            const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const diaDisplay = document.getElementById('dia_semana_display');
+            diaDisplay.textContent = dias[fecha.getDay()];
+        });
+
+        // Filtrar grupos cuando cambia el tipo
+        document.getElementById('grupo_tipo').addEventListener('change', function() {
+            const tipo = this.value;
+            const grupoSelect = document.getElementById('grupo_id');
+            const options = grupoSelect.options;
+            
+            for (let i = 0; i < options.length; i++) {
+                const option = options[i];
+                if (option.value === "") {
+                    option.style.display = '';
+                } else {
+                    const optionTipo = option.getAttribute('data-tipo');
+                    if (optionTipo === tipo) {
+                        option.style.display = '';
+                    } else {
+                        option.style.display = 'none';
+                    }
+                }
+            }
+            
+            grupoSelect.value = "";
+        });
+
+        // Inicializar día de la semana al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            const fechaInput = document.getElementById('fecha');
+            if (fechaInput.value) {
+                const fecha = new Date(fechaInput.value + 'T00:00:00');
+                const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                const diaDisplay = document.getElementById('dia_semana_display');
+                diaDisplay.textContent = dias[fecha.getDay()];
+            }
+        });
+    </script>
+</body>
+</html>
