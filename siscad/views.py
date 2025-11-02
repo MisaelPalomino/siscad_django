@@ -1,11 +1,10 @@
 from datetime import date, datetime, timedelta
-
-from django.shortcuts import render, redirect
+from django.utils import timezone
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q, Count
-
 from .forms import UploadExcelForm
 
 
@@ -26,6 +25,8 @@ from .models import (
     AsistenciaAlumno,
     GrupoPractica,
     AsistenciaProfesor,
+    Reserva,
+    Aula,
 )
 import pandas as pd
 
@@ -165,7 +166,7 @@ def insertar_alumnos_excel(request):
 
                 messages.success(
                     request,
-                    f"✅ Importación completada: {created} creados, {updated} actualizados.",
+                    f" Importación completada: {created} creados, {updated} actualizados.",
                 )
                 if errores:
                     for err in errores[:10]:
@@ -174,7 +175,7 @@ def insertar_alumnos_excel(request):
                 return redirect("insertar_alumnos_excel")
 
             except Exception as e:
-                messages.error(request, f"❌ Error leyendo el archivo: {e}")
+                messages.error(request, f" Error leyendo el archivo: {e}")
                 return redirect("insertar_alumnos_excel")
 
     else:
@@ -921,9 +922,6 @@ def matricula_laboratorio(request):
     return render(request, "siscad/alumno/matricula_laboratorio.html", context)
 
 
-from datetime import date, timedelta
-
-
 def generar_asistencias_laboratorio(alumno, grupo_lab):
     """
     Genera asistencias para el laboratorio matriculado por el alumno,
@@ -1220,22 +1218,24 @@ def inicio_profesor(request):
 
 
 def visualizar_horario_profesor(request):
-    # 1. Obtener el profesor logueado usando el email de la sesión
     if "email" not in request.session:
         return redirect("login")
 
-    email = request.session["email"]
+    profesor = get_object_or_404(Profesor, email=request.session["email"])
 
-    try:
-        profesor = Profesor.objects.get(email=email)
-    except Profesor.DoesNotExist:
-        return redirect("login")
-    except Profesor.MultipleObjectsReturned:
-        profesor = Profesor.objects.filter(email=email).first()
+    hoy = date.today()
+    dia_semana = hoy.weekday()  # lunes=0 ... domingo=6
+    if dia_semana >= 5:  # si es sábado o domingo → próxima semana
+        inicio_semana = hoy + timedelta(days=(7 - dia_semana))
+    else:
+        inicio_semana = hoy - timedelta(days=dia_semana)
 
-    print(f"DEBUG: Profesor encontrado: {profesor.nombre}")
+    fin_semana = inicio_semana + timedelta(days=4)  # lunes a viernes
 
-    # 2. Obtener todos los horarios del profesor (teoría, práctica, laboratorio)
+    reservas_semana = Reserva.objects.filter(
+        profesor=profesor, fecha__range=(inicio_semana, fin_semana)
+    ).select_related("aula")
+
     horarios = (
         Hora.objects.select_related(
             "aula",
@@ -1251,32 +1251,6 @@ def visualizar_horario_profesor(request):
         .order_by("dia", "hora_inicio")
     )
 
-    print(f"DEBUG: Horarios encontrados para el profesor: {horarios.count()}")
-
-    # Debug detallado de horarios
-    for h in horarios:
-        if h.grupo_teoria:
-            tipo = "Teoría"
-            curso_nombre = h.grupo_teoria.curso.nombre
-            grupo_info = f"T-{h.grupo_teoria.turno}"
-        elif h.grupo_practica:
-            tipo = "Práctica"
-            curso_nombre = h.grupo_practica.grupo_teoria.curso.nombre
-            grupo_info = f"P-{h.grupo_practica.turno}"
-        elif h.grupo_laboratorio:
-            tipo = "Laboratorio"
-            curso_nombre = h.grupo_laboratorio.grupo_teoria.curso.nombre
-            grupo_info = f"L-{h.grupo_laboratorio.grupo}"
-        else:
-            tipo = "Otro"
-            curso_nombre = "Desconocido"
-            grupo_info = ""
-
-        print(
-            f"DEBUG Horario Profesor: {h.dia} {h.hora_inicio}-{h.hora_fin} - {tipo}: {curso_nombre} {grupo_info} - Aula: {h.aula.nombre if h.aula else 'Sin aula'}"
-        )
-
-    # 3. Construir estructura para mostrar
     dias_lista = [
         ("L", "Lunes"),
         ("M", "Martes"),
@@ -1285,22 +1259,17 @@ def visualizar_horario_profesor(request):
         ("V", "Viernes"),
     ]
 
-    # Crear estructura de datos
     tabla_horarios = {}
     for h in horarios:
         bloque = f"{h.hora_inicio.strftime('%H:%M')} - {h.hora_fin.strftime('%H:%M')}"
         dia = h.dia
 
-        # Usar "Horario del Profesor" como clave única
         aula_key = "Horario del Profesor"
-
         if aula_key not in tabla_horarios:
             tabla_horarios[aula_key] = {}
-
         if bloque not in tabla_horarios[aula_key]:
             tabla_horarios[aula_key][bloque] = {d: "" for d, _ in dias_lista}
 
-        # Construir información del curso
         if h.grupo_teoria:
             curso = h.grupo_teoria.curso.nombre
             grupo = f"T-{h.grupo_teoria.turno}"
@@ -1314,22 +1283,41 @@ def visualizar_horario_profesor(request):
             grupo = f"L-{h.grupo_laboratorio.grupo}"
             tipo_info = "Laboratorio"
         else:
-            curso = "Sin asignar"
-            grupo = ""
-            tipo_info = ""
+            curso, grupo, tipo_info = "Sin asignar", "", ""
 
         aula_info = f" ({h.aula.nombre})" if h.aula else ""
         info_curso = f"{curso} {grupo} - {tipo_info}{aula_info}"
 
         tabla_horarios[aula_key][bloque][dia] = info_curso
 
-    # Ordenar por hora
+    for r in reservas_semana:
+        dia_letra = ["L", "M", "X", "J", "V"][r.fecha.weekday()]
+        horas_reserva = Hora.objects.filter(reserva=r)
+
+        for h in horas_reserva:
+            bloque = (
+                f"{h.hora_inicio.strftime('%H:%M')} - {h.hora_fin.strftime('%H:%M')}"
+            )
+            aula_key = "Horario del Profesor"
+            if aula_key not in tabla_horarios:
+                tabla_horarios[aula_key] = {}
+            if bloque not in tabla_horarios[aula_key]:
+                tabla_horarios[aula_key][bloque] = {d: "" for d, _ in dias_lista}
+
+            tabla_horarios[aula_key][bloque][dia_letra] = (
+                f"🟢 Reserva ({r.aula.nombre})"
+            )
+
     for aula in tabla_horarios:
         tabla_horarios[aula] = dict(
             sorted(tabla_horarios[aula].items(), key=lambda x: x[0])
         )
 
-    # 4. Obtener estadísticas del profesor
+    total_reservas_activas = Reserva.objects.filter(
+        profesor=profesor, fecha__gte=hoy
+    ).count()
+    reservas_disponibles = max(0, profesor.cantidad_reservas - total_reservas_activas)
+
     estadisticas = {
         "total_horarios": horarios.count(),
         "total_teoria": horarios.filter(grupo_teoria__profesor=profesor).count(),
@@ -1352,10 +1340,11 @@ def visualizar_horario_profesor(request):
                 ]
             )
         ),
-        "reservas_disponibles": profesor.cantidad_reservas,
+        "reservas_disponibles": reservas_disponibles,
+        "reservas_activas": total_reservas_activas,
+        "semana": f"{inicio_semana.strftime('%d/%m/%Y')} - {fin_semana.strftime('%d/%m/%Y')}",
     }
 
-    # 5. Crear la estructura final
     context = {
         "profesor": profesor,
         "dias_lista": dias_lista,
@@ -1375,9 +1364,211 @@ def visualizar_horario_profesor(request):
     return render(request, "siscad/profesor/visualizar_horario_profesor.html", context)
 
 
-from django.shortcuts import render, redirect
-from django.db.models import Q
-from datetime import datetime
+def reservar_aula(request):
+    # Verificar sesión
+    if "email" not in request.session:
+        return redirect("login")
+
+    profesor = get_object_or_404(Profesor, email=request.session["email"])
+
+    # 🔹 Eliminar reservas pasadas automáticamente
+    Reserva.objects.filter(fecha__lt=date.today()).delete()
+
+    # 🔹 Contar reservas activas (de hoy o futuras)
+    reservas_activas_count = Reserva.objects.filter(
+        profesor=profesor,
+        fecha__gte=date.today(),
+    ).count()
+
+    # 🔹 Verificar si alcanzó el límite de reservas activas
+    if reservas_activas_count >= profesor.cantidad_reservas:
+        messages.error(request, "Ya has alcanzado el máximo de reservas permitidas.")
+        return render(
+            request,
+            "siscad/profesor/reservar_aula.html",
+            {
+                "aulas": Aula.objects.all(),
+                "horas": [],
+                "reservas": Reserva.objects.filter(profesor=profesor),
+                "fecha_seleccionada": None,
+                "dia_letra": None,
+            },
+        )
+
+    aulas = Aula.objects.all()
+    horas_disponibles = []
+    fecha_seleccionada = None
+    dia_letra = None
+
+    # -------------------- POST (reservar aula) --------------------
+    if request.method == "POST":
+        aula_id = request.POST.get("aula_id")
+        fecha = request.POST.get("fecha")
+        hora_inicio = request.POST.get("hora_inicio")
+
+        if not (aula_id and fecha and hora_inicio):
+            messages.error(request, "Por favor completa todos los campos.")
+            return render(
+                request,
+                "siscad/profesor/reservar_aula.html",
+                {
+                    "aulas": aulas,
+                    "horas": [],
+                    "reservas": Reserva.objects.filter(profesor=profesor),
+                    "fecha_seleccionada": None,
+                    "dia_letra": None,
+                },
+            )
+
+        aula = get_object_or_404(Aula, id=aula_id)
+        fecha_seleccionada = datetime.strptime(fecha, "%Y-%m-%d").date()
+
+        # Día de la semana (L, M, X, J, V)
+        dia_semana = fecha_seleccionada.weekday()
+        if dia_semana >= 5:
+            messages.error(request, "Solo puedes reservar entre lunes y viernes.")
+            return redirect("reservar_aula")
+
+        letras_dia = ["L", "M", "X", "J", "V"]
+        dia_letra = letras_dia[dia_semana]
+
+        # Verificar que la hora esté libre
+        hora_obj = get_object_or_404(
+            Hora, aula=aula, dia=dia_letra, hora_inicio=hora_inicio, tipo__isnull=True
+        )
+
+        # Verificar conflictos con clases o reservas del profesor
+        conflicto_profesor = Hora.objects.filter(
+            Q(grupo_teoria__profesor=profesor)
+            | Q(grupo_practica__profesor=profesor)
+            | Q(grupo_laboratorio__profesor=profesor)
+            | Q(reserva__profesor=profesor),
+            dia=dia_letra,
+            hora_inicio=hora_obj.hora_inicio,
+        ).exists()
+
+        if conflicto_profesor:
+            messages.error(request, "Tienes una clase o reserva en ese horario.")
+            return render(
+                request,
+                "siscad/profesor/reservar_aula.html",
+                {
+                    "aulas": aulas,
+                    "horas": [],
+                    "reservas": Reserva.objects.filter(profesor=profesor),
+                    "fecha_seleccionada": None,
+                    "dia_letra": None,
+                },
+            )
+
+        # Crear la reserva
+        reserva = Reserva.objects.create(
+            profesor=profesor,
+            aula=aula,
+            fecha=fecha_seleccionada,
+            curso=Curso.objects.first(),  # Puedes ajustarlo
+        )
+
+        # Asignar la hora
+        hora_obj.tipo = "R"
+        hora_obj.reserva = reserva
+        hora_obj.save()
+
+        messages.success(
+            request,
+            f"✅ Reserva realizada con éxito para el aula {aula.nombre} el {fecha_seleccionada}.",
+        )
+        return redirect("reservar_aula")
+
+    # -------------------- GET (mostrar horas disponibles) --------------------
+    if request.GET.get("aula_id") and request.GET.get("fecha"):
+        aula_id = request.GET.get("aula_id")
+        fecha_str = request.GET.get("fecha")
+
+        try:
+            fecha_seleccionada = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+        except ValueError:
+            messages.error(request, "Fecha inválida.")
+            return redirect("reservar_aula")
+
+        dia_semana = fecha_seleccionada.weekday()
+        if dia_semana < 5:
+            letras_dia = ["L", "M", "X", "J", "V"]
+            dia_letra = letras_dia[dia_semana]
+            aula = get_object_or_404(Aula, id=aula_id)
+            horas_disponibles = Hora.objects.filter(
+                aula=aula, dia=dia_letra, tipo__isnull=True
+            ).order_by("hora_inicio")
+
+    # -------------------- Contexto --------------------
+    reservas_profesor = Reserva.objects.filter(profesor=profesor).select_related("aula")
+
+    context = {
+        "aulas": aulas,
+        "horas": horas_disponibles,
+        "reservas": reservas_profesor,
+        "fecha_seleccionada": fecha_seleccionada,
+        "dia_letra": dia_letra,
+    }
+
+    return render(request, "siscad/profesor/reservar_aula.html", context)
+
+
+def cancelar_reserva(request, reserva_id):
+    profesor = get_object_or_404(Profesor, email=request.session["email"])
+    reserva = get_object_or_404(Reserva, id=reserva_id, profesor=profesor)
+
+    ahora = timezone.localtime().time()
+    hoy = timezone.localdate()
+
+    if reserva.fecha > hoy or (
+        reserva.fecha == hoy and all(h.hora_inicio > ahora for h in reserva.horas.all())
+    ):
+        for h in reserva.horas.all():
+            h.tipo = None
+            h.reserva = None
+            h.save()
+
+        reserva.delete()
+        profesor.cantidad_reservas += 1
+        profesor.save()
+
+        messages.success(request, "✅ Reserva cancelada exitosamente.")
+    else:
+        messages.error(
+            request,
+            "⚠️ No puedes cancelar una reserva que ya ha comenzado o cuya fecha ha pasado.",
+        )
+
+    return redirect("reservar_aula")
+
+
+def ver_cancelar_reservas(request):
+    profesor = get_object_or_404(Profesor, email=request.session["email"])
+    ahora = timezone.localtime()
+    fecha_actual = ahora.date()
+    hora_actual = ahora.time()
+
+    # Eliminar reservas cuya fecha ya pasó
+    reservas_pasadas = Reserva.objects.filter(fecha__lt=fecha_actual)
+    for reserva in reservas_pasadas:
+        reserva.delete()
+
+    # Eliminar reservas del día actual que ya terminaron
+    reservas_hoy = Reserva.objects.filter(fecha=fecha_actual)
+    for reserva in reservas_hoy:
+        horas_reserva = reserva.horas.all()
+        if all(h.hora_fin < hora_actual for h in horas_reserva):
+            reserva.delete()
+
+    # Mostrar solo reservas activas
+    reservas = Reserva.objects.filter(profesor=profesor).order_by("-fecha")
+
+    context = {
+        "reservas": reservas,
+        "profesor": profesor,
+    }
+    return render(request, "siscad/profesor/cancelar_reservas.html", context)
 
 
 def visualizar_asistencias_profesor(request):

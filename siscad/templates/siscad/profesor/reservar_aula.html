@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reservar Aula</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f7f9fc;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            background: #fff;
+            padding: 25px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        select, input[type="date"], button {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 15px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .messages {
+            margin-bottom: 20px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .reserva-lista {
+            margin-top: 30px;
+        }
+
+        .reserva {
+            background: #ecf0f1;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+        }
+
+        .reserva strong {
+            color: #2c3e50;
+        }
+
+        .dia-auto {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: -5px;
+        }
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Reservar Aula</h1>
+
+    <!-- Mensajes -->
+    <div class="messages">
+        {% for message in messages %}
+            <div class="{% if message.tags == 'success' %}success{% else %}error{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Formulario para seleccionar aula y fecha -->
+    <form method="get" action="{% url 'reservar_aula' %}">
+        <label for="aula_id">Seleccionar aula:</label>
+        <select name="aula_id" id="aula_id" required>
+            <option value="">-- Selecciona un aula --</option>
+            {% for aula in aulas %}
+                <option value="{{ aula.id }}" {% if aula.id|stringformat:"s" == request.GET.aula_id %}selected{% endif %}>
+                    {{ aula.nombre }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="fecha">Seleccionar fecha:</label>
+        <input type="date" id="fecha" name="fecha" value="{{ fecha_seleccionada }}" required>
+
+        <button type="submit">Ver horas disponibles</button>
+    </form>
+
+    {% if dia_letra %}
+        <p class="dia-auto">Día detectado: <strong>{{ dia_letra }}</strong></p>
+    {% endif %}
+
+    <!-- Formulario para reservar -->
+    {% if horas %}
+        <form method="post" action="{% url 'reservar_aula' %}">
+            {% csrf_token %}
+            <input type="hidden" name="aula_id" value="{{ request.GET.aula_id }}">
+            <input type="hidden" name="fecha" value="{{ request.GET.fecha }}">
+
+            <label for="hora_inicio">Seleccionar hora disponible:</label>
+                <select name="hora_inicio" id="hora_inicio" required>
+                    <option value="">-- Selecciona una hora --</option>
+                    {% for hora in horas %}
+                        <option value="{{ hora.hora_inicio|time:'H:i:s' }}">{{ hora.hora_inicio|time:'H:i' }}</option>
+                    {% endfor %}
+                </select>
+
+
+            <button type="submit">Reservar Aula</button>
+        </form>
+    {% endif %}
+
+    <!-- Reservas actuales -->
+    <div class="reserva-lista">
+        <h2>Mis reservas activas</h2>
+        {% if reservas %}
+            {% for r in reservas %}
+                <div class="reserva">
+                    <strong>{{ r.aula.nombre }}</strong> — {{ r.fecha }}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No tienes reservas activas.</p>
+        {% endif %}
+    </div>
+
+</div>
+</body>
+</html>

@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from collections import defaultdict
+from django.utils import timezone
+
 import random
 
 SEMESTRES_OBJETIVO = [2, 4, 6, 8, 10]
@@ -261,7 +263,14 @@ class Reserva(models.Model):
     profesor = models.ForeignKey(
         Profesor, on_delete=models.CASCADE, related_name="reservas"
     )
-    curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="reservas")
+    curso = models.ForeignKey(
+        Curso, on_delete=models.CASCADE, related_name="reservas", null=True, blank=True
+    )
+    aula = models.ForeignKey(Aula, on_delete=models.CASCADE, null=True, blank=True)
+    fecha = models.DateField(default=timezone.now)  # ⬅️ Fecha de creación o uso
+
+    def __str__(self):
+        return f"Reserva de {self.profesor.nombre} en {self.aula.nombre} ({self.fecha})"
 
 
 class Hora(models.Model):
@@ -283,7 +292,7 @@ class Hora(models.Model):
     dia = models.CharField(max_length=1, choices=DIAS_SEMANA)
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
-    tipo = models.CharField(max_length=1, choices=TIPOS_SESION)
+    tipo = models.CharField(max_length=1, choices=TIPOS_SESION, null=True, blank=True)
     aula = models.ForeignKey(
         Aula, on_delete=models.SET_NULL, null=True, related_name="horas"
     )

@@ -825,10 +825,15 @@ def try_assign_sequence(
 
 def generar_horarios_modeloA():
     """
-    Genera horarios modelo A y exporta a siscad/horarios_debug.xlsx
+    Genera horarios modelo A y exporta a siscad/horarios_debug.xlsx.
+    También crea todas las horas vacías (disponibles para reservas).
     """
+
+    print("🧩 Generando horarios modelo A con horas vacías...")
+
     # Preparar timelines por turno (A,B,C,D)
     TIMELINES = {k: generar_bloques(v["inicio"], v["fin"]) for k, v in TURNOS.items()}
+    DIAS_SEMANA = ["L", "M", "X", "J", "V"]
 
     # Estructuras de ocupación
     busy_prof = {}
@@ -842,17 +847,45 @@ def generar_horarios_modeloA():
         "aula": [a for a in all_aulas if not (a.tipo and a.tipo.lower() == "lab")],
     }
 
+    # =========================================================
+    # 🔹 PASO 1: CREAR TODAS LAS HORAS VACÍAS (tipo=None)
+    # =========================================================
+    print("🔸 Generando horas vacías...")
+    created_count = 0
+
+    for aula in all_aulas:
+        for dia in DIAS_SEMANA:
+            for turno_key, timeline in TIMELINES.items():
+                for bloque in timeline:
+                    if bloque["type"] == "class":  # ignoramos los recesos
+                        hora_inicio = bloque["start"]
+                        hora_fin = bloque["end"]
+
+                        _, created = Hora.objects.get_or_create(
+                            dia=dia,
+                            aula=aula,
+                            hora_inicio=hora_inicio,
+                            hora_fin=hora_fin,
+                            defaults={"tipo": None},
+                        )
+                        if created:
+                            created_count += 1
+
+    print(f"✅ Horas vacías creadas o ya existentes: {created_count}")
+
+    # =========================================================
+    # 🔹 PASO 2: CONTINUAR CON GENERACIÓN NORMAL
+    # =========================================================
+
     datos = []
     problemas = []
 
-    # cursos semestre par (filtrado seguro)
     cursos_par = [
         c
         for c in Curso.objects.all()
         if isinstance(c.semestre, int) and c.semestre % 2 == 0
     ]
 
-    # Cargar todos los grupos
     grupos_teoria = list(GrupoTeoria.objects.select_related("curso", "profesor").all())
     grupos_practica = list(
         GrupoPractica.objects.select_related(
@@ -865,7 +898,9 @@ def generar_horarios_modeloA():
         ).all()
     )
 
-    # Procesar TEORÍA
+    # =========================================================
+    # 🔹 TEORÍA
+    # =========================================================
     for gt in grupos_teoria:
         curso = gt.curso
         if curso not in cursos_par:
@@ -874,17 +909,14 @@ def generar_horarios_modeloA():
         if sessions_needed <= 0:
             continue
 
-        # turno: usar el código directo (A/B/C/D). Si falta, asumimos A
         turno_codigo = getattr(gt, "turno", None) or "A"
         if turno_codigo not in TIMELINES:
             turno_codigo = "A"
         timeline = TIMELINES[turno_codigo]
 
         assigned_any = False
-        # buscar por días L-V
-        for dia in DIAS:
-            # elegir tipo de aula
-            tipo_aula = "aula"  # teoría usa aula
+        for dia in DIAS_SEMANA:
+            tipo_aula = "aula"
             assigned = try_assign_sequence(
                 dia,
                 turno_codigo,
@@ -899,6 +931,13 @@ def generar_horarios_modeloA():
             )
             if assigned:
                 for block_no, a in enumerate(assigned, start=1):
+                    Hora.objects.filter(
+                        dia=dia,
+                        aula=a["aula"],
+                        hora_inicio=a["start"],
+                        hora_fin=a["end"],
+                    ).update(tipo="T", grupo_teoria=gt)
+
                     datos.append(
                         {
                             "Curso": curso.nombre,
@@ -911,24 +950,25 @@ def generar_horarios_modeloA():
                             "Bloque Nº": block_no,
                             "Inicio": a["start"].strftime("%H:%M"),
                             "Fin": a["end"].strftime("%H:%M"),
-                            "Profesor": getattr(gt.profesor, "nombre", "")
-                            if gt.profesor
-                            else "",
+                            "Profesor": getattr(gt.profesor, "nombre", ""),
                             "Aula": a["aula"].nombre,
                         }
                     )
                 assigned_any = True
                 break
+
         if not assigned_any:
             problemas.append(
                 {
                     "Elemento": f"Teoría {curso.nombre} (grupo id {gt.id})",
                     "Horas solicitadas": sessions_needed,
-                    "Motivo": "No se encontró segmento contínuo libre",
+                    "Motivo": "No se encontró segmento continuo libre",
                 }
             )
 
-    # Procesar PRÁCTICA
+    # =========================================================
+    # 🔹 PRÁCTICA
+    # =========================================================
     for gp in grupos_practica:
         gt = getattr(gp, "grupo_teoria", None)
         if not gt:
@@ -940,15 +980,14 @@ def generar_horarios_modeloA():
         if sessions_needed <= 0:
             continue
 
-        # turno: gp puede tener turno propiamente; si no, usamos el turno del gt
         turno_codigo = getattr(gp, "turno", None) or getattr(gt, "turno", None) or "A"
         if turno_codigo not in TIMELINES:
             turno_codigo = "A"
         timeline = TIMELINES[turno_codigo]
 
         assigned_any = False
-        for dia in DIAS:
-            tipo_aula = "aula"  # práctica usa aula
+        for dia in DIAS_SEMANA:
+            tipo_aula = "aula"
             assigned = try_assign_sequence(
                 dia,
                 turno_codigo,
@@ -963,38 +1002,27 @@ def generar_horarios_modeloA():
             )
             if assigned:
                 for block_no, a in enumerate(assigned, start=1):
-                    datos.append(
-                        {
-                            "Curso": curso.nombre,
-                            "Código Curso": curso.codigo,
-                            "Semestre": curso.semestre,
-                            "Grupo (Práctica id)": gp.id,
-                            "Tipo Sesión": "Práctica",
-                            "Día": dia,
-                            "Turno": turno_codigo,
-                            "Bloque Nº": block_no,
-                            "Inicio": a["start"].strftime("%H:%M"),
-                            "Fin": a["end"].strftime("%H:%M"),
-                            "Profesor": getattr(gp.profesor, "nombre", "")
-                            if gp.profesor
-                            else getattr(gt.profesor, "nombre", "")
-                            if gt.profesor
-                            else "",
-                            "Aula": a["aula"].nombre,
-                        }
-                    )
+                    Hora.objects.filter(
+                        dia=dia,
+                        aula=a["aula"],
+                        hora_inicio=a["start"],
+                        hora_fin=a["end"],
+                    ).update(tipo="P", grupo_practica=gp)
                 assigned_any = True
                 break
+
         if not assigned_any:
             problemas.append(
                 {
                     "Elemento": f"Práctica {curso.nombre} (gp id {gp.id})",
                     "Horas solicitadas": sessions_needed,
-                    "Motivo": "No se encontró segmento contínuo libre",
+                    "Motivo": "No se encontró segmento continuo libre",
                 }
             )
 
-    # Procesar LABORATORIO
+    # =========================================================
+    # 🔹 LABORATORIO
+    # =========================================================
     for gl in grupos_laboratorio:
         gt = getattr(gl, "grupo_teoria", None)
         if not gt:
@@ -1006,29 +1034,13 @@ def generar_horarios_modeloA():
         if sessions_needed <= 0:
             continue
 
-        # turno: GrupoLaboratorio suele tener atributo 'grupo' (A,B,C,...) que indica A/C morning, B/D tarde.
-        turno_from_group = getattr(gl, "turno", None)
-        if not turno_from_group:
-            # intentar deducir por la letra en gl.grupo si existe
-            letra = getattr(gl, "grupo", None)
-            if (
-                letra
-                and isinstance(letra, str)
-                and letra.upper() in ("A", "B", "C", "D")
-            ):
-                turno_codigo = letra.upper()
-            else:
-                # fallback al turno del grupo_teoria
-                turno_codigo = getattr(gt, "turno", "A")
-        else:
-            turno_codigo = turno_from_group
-
+        turno_codigo = getattr(gl, "turno", None) or getattr(gt, "turno", "A")
         if turno_codigo not in TIMELINES:
             turno_codigo = "A"
         timeline = TIMELINES[turno_codigo]
 
         assigned_any = False
-        for dia in DIAS:
+        for dia in DIAS_SEMANA:
             tipo_aula = "lab"
             assigned = try_assign_sequence(
                 dia,
@@ -1044,119 +1056,44 @@ def generar_horarios_modeloA():
             )
             if assigned:
                 for block_no, a in enumerate(assigned, start=1):
-                    datos.append(
-                        {
-                            "Curso": curso.nombre,
-                            "Código Curso": curso.codigo,
-                            "Semestre": curso.semestre,
-                            "Grupo (Lab id)": gl.id,
-                            "Tipo Sesión": "Laboratorio",
-                            "Día": dia,
-                            "Turno": turno_codigo,
-                            "Bloque Nº": block_no,
-                            "Inicio": a["start"].strftime("%H:%M"),
-                            "Fin": a["end"].strftime("%H:%M"),
-                            "Profesor": getattr(gl.profesor, "nombre", "")
-                            if gl.profesor
-                            else getattr(gt.profesor, "nombre", "")
-                            if gt.profesor
-                            else "",
-                            "Aula": a["aula"].nombre,
-                        }
-                    )
+                    Hora.objects.filter(
+                        dia=dia,
+                        aula=a["aula"],
+                        hora_inicio=a["start"],
+                        hora_fin=a["end"],
+                    ).update(tipo="L", grupo_laboratorio=gl)
                 assigned_any = True
                 break
+
         if not assigned_any:
             problemas.append(
                 {
                     "Elemento": f"Laboratorio {curso.nombre} (gl id {gl.id})",
                     "Horas solicitadas": sessions_needed,
-                    "Motivo": "No se encontró segmento contínuo libre (aulas lab/profesor/semestre ocupados)",
+                    "Motivo": "No se encontró segmento continuo libre",
                 }
             )
 
-    # Añadir filas de receso al Excel (opcional: mostrar todos los recesos por cada día/turno)
-    for turno_key, timeline in TIMELINES.items():
-        for dia in DIAS:
-            for entry in timeline:
-                if entry["type"] == "break":
-                    datos.append(
-                        {
-                            "Curso": "",
-                            "Código Curso": "",
-                            "Semestre": "",
-                            "Grupo (Receso)": "",
-                            "Tipo Sesión": "Receso",
-                            "Día": dia,
-                            "Turno": turno_key,
-                            "Bloque Nº": "",
-                            "Inicio": entry["start"].strftime("%H:%M"),
-                            "Fin": entry["end"].strftime("%H:%M"),
-                            "Profesor": "",
-                            "Aula": "",
-                        }
-                    )
-
-    # Exportar a Excel en siscad/horarios_debug.xlsx
+    # =========================================================
+    # 🔹 EXPORTAR A EXCEL
+    # =========================================================
     base_dir = settings.BASE_DIR
-    ruta_directorio = str(base_dir) + "/siscad"
+    ruta_directorio = os.path.join(base_dir, "siscad", "datos")
     os.makedirs(ruta_directorio, exist_ok=True)
-    ruta_archivo = ruta_directorio + "/datos/horarios_debug.xlsx"
+    ruta_archivo = os.path.join(ruta_directorio, "horarios_debug.xlsx")
 
-    df = pd.DataFrame(
-        datos,
-        columns=[
-            "Curso",
-            "Código Curso",
-            "Semestre",
-            "Grupo (Teoría id)",
-            "Grupo (Práctica id)",
-            "Grupo (Lab id)",
-            "Grupo (Receso)",
-            "Tipo Sesión",
-            "Día",
-            "Turno",
-            "Bloque Nº",
-            "Inicio",
-            "Fin",
-            "Profesor",
-            "Aula",
-        ],
-    )
-
-    # Para evitar error si no existen todas las columnas en datos, reindex con fillna
-    df = df.reindex(
-        columns=[
-            "Curso",
-            "Código Curso",
-            "Semestre",
-            "Grupo (Teoría id)",
-            "Grupo (Práctica id)",
-            "Grupo (Lab id)",
-            "Grupo (Receso)",
-            "Tipo Sesión",
-            "Día",
-            "Turno",
-            "Bloque Nº",
-            "Inicio",
-            "Fin",
-            "Profesor",
-            "Aula",
-        ]
-    ).fillna("")
-
+    df = pd.DataFrame(datos)
     df.to_excel(ruta_archivo, index=False)
-    # Crear hoja problemas también
-    if problemas:
-        prob_df = pd.DataFrame(problemas)
-        with pd.ExcelWriter(ruta_archivo, engine="openpyxl", mode="a") as writer:
-            prob_df.to_excel(writer, index=False, sheet_name="problemas")
 
-    print(f"✅ Excel generado en: {ruta_archivo}")
     if problemas:
-        print(
-            f" Se detectaron {len(problemas)} problemas. Revisa la hoja 'problemas' en el Excel."
+        pd.DataFrame(problemas).to_excel(
+            ruta_archivo.replace(".xlsx", "_problemas.xlsx"), index=False
         )
+
+    print(f"✅ Horarios generados y exportados a: {ruta_archivo}")
+    if problemas:
+        print(f"⚠️ {len(problemas)} conflictos detectados.")
+
     return ruta_archivo
 
 
@@ -1407,7 +1344,6 @@ def generar_data():
     ejecutar_generacion_asistencias_profesores()
 
 
-
 def insertar_asistencia_alumno():
     """
     Función para pregenerar asistencias de alumnos desde el 2 de septiembre 2025 hasta el 25 de diciembre 2025.
@@ -1439,8 +1375,6 @@ def insertar_asistencia_alumno():
 
         for alumno in alumnos:
             try:
-                print(f"\n🎓 Procesando alumno: {alumno.nombre}")
-
                 # Obtener horarios del alumno (teoría, práctica y laboratorio)
                 horarios_alumno = obtener_horarios_alumno(alumno)
 
@@ -1459,8 +1393,6 @@ def insertar_asistencia_alumno():
                         asistencias_creadas += asistencias_fecha
 
                     fecha_actual += datetime.timedelta(days=1)
-
-                print(f"    Asistencias generadas para {alumno.nombre}")
 
             except Exception as e:
                 print(f"    Error procesando alumno {alumno.nombre}: {str(e)}")
@@ -1584,7 +1516,6 @@ def generar_asistencias_fecha(alumno, fecha, horarios_alumno, fecha_hoy):
             )
 
             estado_display = " PRESENTE" if estado == "P" else " FALTA"
-            print(f"      {fecha} - {curso_nombre} - {estado_display}")
 
         except Exception as e:
             print(f"       Error en asistencia {fecha}: {str(e)}")
@@ -1674,12 +1605,10 @@ def insertar_asistencia_profesor():
     fecha_fin = datetime.date(2025, 12, 25)  # 25 de diciembre de 2025
     fecha_hoy = datetime.datetime.now().date()  # Fecha actual del sistema
 
-    print(f" Rango de fechas: {fecha_inicio} hasta {fecha_fin}")
-    print(f" Fecha de hoy: {fecha_hoy}")
-    print(f" Presentes desde: {fecha_inicio} hasta {fecha_hoy}")
-
     if fecha_hoy < fecha_fin:
-        print(f" Faltas desde: {fecha_hoy + datetime.timedelta(days=1)} hasta {fecha_fin}")
+        print(
+            f" Faltas desde: {fecha_hoy + datetime.timedelta(days=1)} hasta {fecha_fin}"
+        )
     else:
         print("ℹ  Ya pasó la fecha final, todas las asistencias serán presentes")
 
@@ -1698,8 +1627,6 @@ def insertar_asistencia_profesor():
 
         for profesor in profesores:
             try:
-                print(f"\n🎓 Procesando profesor: {profesor.nombre}")
-
                 # Obtener horarios del profesor (teoría, práctica y laboratorio)
                 horarios_profesor = obtener_horarios_profesor(profesor)
 
@@ -1718,8 +1645,6 @@ def insertar_asistencia_profesor():
                         asistencias_creadas += asistencias_fecha
 
                     fecha_actual += datetime.timedelta(days=1)
-
-                print(f"    Asistencias generadas para {profesor.nombre}")
 
             except Exception as e:
                 print(f"    Error procesando profesor {profesor.nombre}: {str(e)}")
@@ -1845,7 +1770,6 @@ def generar_asistencias_fecha_profesor(profesor, fecha, horarios_profesor, fecha
                 grupo_info = f"L-{hora.grupo_laboratorio.grupo}"
 
             estado_display = " PRESENTE" if estado == "P" else "❌ FALTA"
-            print(f"      {fecha} - {curso_nombre} {grupo_info} - {estado_display}")
 
         except Exception as e:
             print(f"       Error en asistencia {fecha}: {str(e)}")
@@ -1869,7 +1793,9 @@ def mostrar_estadisticas_asistencias_profesores():
 
     print(f" Total de asistencias: {total_asistencias}")
     print(f" Presentes (hasta {datetime.datetime.now().date()}): {presentes}")
-    print(f" Faltas (desde {datetime.datetime.now().date() + datetime.timedelta(days=1)}): {faltas}")
+    print(
+        f" Faltas (desde {datetime.datetime.now().date() + datetime.timedelta(days=1)}): {faltas}"
+    )
 
     if total_asistencias > 0:
         porcentaje_presente = (presentes / total_asistencias) * 100

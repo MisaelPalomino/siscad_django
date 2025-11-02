@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cancelar Reservas</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+        h2 { color: #333; }
+        table { width: 100%; border-collapse: collapse; background: #fff; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
+        th { background: #007bff; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+        .btn-cancelar {
+            background: #dc3545;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn-cancelar:hover { background: #c82333; }
+        .mensaje { margin-bottom: 15px; padding: 10px; border-radius: 4px; }
+        .exito { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h2>Mis Reservas Activas</h2>
+
+    {% for message in messages %}
+        <div class="mensaje {% if message.tags == 'success' %}exito{% else %}error{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+
+    {% if reservas %}
+        <table>
+            <tr>
+                <th>Fecha</th>
+                <th>Aula</th>
+                <th>Día</th>
+                <th>Hora Inicio</th>
+                <th>Hora Fin</th>
+                <th>Acción</th>
+            </tr>
+            {% for reserva in reservas %}
+                {% for hora in reserva.horas.all %}
+                    <tr>
+                        <td>{{ reserva.fecha }}</td>
+                        <td>{{ hora.aula.nombre }}</td>
+                        <td>{{ hora.get_dia_display }}</td>
+                        <td>{{ hora.hora_inicio }}</td>
+                        <td>{{ hora.hora_fin }}</td>
+                        <td>
+                            <form method="post" action="{% url 'cancelar_reserva' reserva.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-cancelar">Cancelar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No tienes reservas activas.</p>
+    {% endif %}
+</body>
+</html>

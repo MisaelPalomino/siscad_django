@@ -94,7 +94,6 @@
         }
         
         .course-cell {
-            background: #3498db;
             color: white;
             border-radius: 5px;
             padding: 8px;
@@ -104,34 +103,25 @@
             transition: background 0.3s;
         }
         
-        .course-cell:hover {
-            background: #2980b9;
-            transform: scale(1.02);
-        }
-        
         .theory {
             background: #e74c3c;
         }
-        
-        .theory:hover {
-            background: #c0392b;
-        }
+        .theory:hover { background: #c0392b; }
         
         .practice {
             background: #27ae60;
         }
-        
-        .practice:hover {
-            background: #219a52;
-        }
+        .practice:hover { background: #219a52; }
         
         .lab {
             background: #f39c12;
         }
-        
-        .lab:hover {
-            background: #d35400;
+        .lab:hover { background: #d35400; }
+
+        .reservation {
+            background: #9b59b6;
         }
+        .reservation:hover { background: #8e44ad; }
         
         .empty-cell {
             background: #ecf0f1;
@@ -164,23 +154,10 @@
         }
         
         @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .schedule-table {
-                font-size: 12px;
-            }
-            
-            .schedule-table td {
-                padding: 5px;
-                height: 60px;
-            }
-            
-            .course-cell {
-                font-size: 9px;
-                padding: 4px;
-            }
+            .container { padding: 10px; }
+            .schedule-table { font-size: 12px; }
+            .schedule-table td { padding: 5px; height: 60px; }
+            .course-cell { font-size: 9px; padding: 4px; }
         }
     </style>
 </head>
@@ -196,41 +173,35 @@
             <p><strong>Código:</strong> {{ profesor.codigo }}</p>
         </div>
 
-        <!-- Estadísticas del Profesor -->
+        <!-- Estadísticas -->
         <div class="estadisticas">
             <h3>📊 Estadísticas de Carga Académica</h3>
-            
             <div class="estadisticas-grid">
                 <div class="estadistica-item">
                     <h4>Total de Horas</h4>
                     <p style="font-size: 24px; margin: 5px 0;">{{ estadisticas.total_horarios }}</p>
                     <p>horas asignadas</p>
                 </div>
-                
                 <div class="estadistica-item">
                     <h4>Teoría</h4>
                     <p style="font-size: 20px; margin: 5px 0;">{{ estadisticas.total_teoria }}</p>
                     <p>horas</p>
                 </div>
-                
                 <div class="estadistica-item">
                     <h4>Práctica</h4>
                     <p style="font-size: 20px; margin: 5px 0;">{{ estadisticas.total_practica }}</p>
                     <p>horas</p>
                 </div>
-                
                 <div class="estadistica-item">
                     <h4>Laboratorio</h4>
                     <p style="font-size: 20px; margin: 5px 0;">{{ estadisticas.total_laboratorio }}</p>
                     <p>horas</p>
                 </div>
-                
                 <div class="estadistica-item">
                     <h4>Cursos Diferentes</h4>
                     <p style="font-size: 20px; margin: 5px 0;">{{ estadisticas.cursos_unicos }}</p>
                     <p>cursos</p>
                 </div>
-                
                 <div class="estadistica-item">
                     <h4>Reservas Disponibles</h4>
                     <p style="font-size: 20px; margin: 5px 0; color: #27ae60;">{{ estadisticas.reservas_disponibles }}</p>
@@ -263,6 +234,7 @@
                                                 {% if 'Teoría' in valor %}theory
                                                 {% elif 'Práctica' in valor %}practice
                                                 {% elif 'Laboratorio' in valor %}lab
+                                                {% elif 'Reserva' in valor %}reservation
                                                 {% endif %}"
                                                 title="{{ valor }}">
                                                 {{ valor }}
@@ -283,7 +255,7 @@
             <div class="reserva-info">
                 <h4> Información de Reservas</h4>
                 <p>Tienes <strong>{{ estadisticas.reservas_disponibles }} reservas disponibles</strong> para este semestre.</p>
-                <p>Puedes utilizar estas reservas para aulas adicionales cuando lo necesites.</p>
+                <p>Las reservas actuales se muestran en violeta dentro del horario.</p>
             </div>
 
             <div style="margin-top: 30px; padding: 15px; background: #ecf0f1; border-radius: 5px;">
@@ -300,6 +272,10 @@
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <div style="width: 20px; height: 20px; background: #f39c12; border-radius: 3px;"></div>
                         <span>Laboratorio</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 20px; height: 20px; background: #9b59b6; border-radius: 3px;"></div>
+                        <span>Reserva</span>
                     </div>
                 </div>
             </div>
@@ -318,23 +294,13 @@
     </div>
 
     <script>
-        // Efectos hover para las celdas de curso
         document.addEventListener('DOMContentLoaded', function() {
             const courseCells = document.querySelectorAll('.course-cell');
             
             courseCells.forEach(cell => {
-                cell.addEventListener('mouseenter', function() {
-                    this.style.transform = 'scale(1.02)';
-                });
-                
-                cell.addEventListener('mouseleave', function() {
-                    this.style.transform = 'scale(1)';
-                });
-                
-                // Mostrar información completa al hacer clic
-                cell.addEventListener('click', function() {
-                    alert('Detalles:\n' + this.title);
-                });
+                cell.addEventListener('mouseenter', function() { this.style.transform = 'scale(1.02)'; });
+                cell.addEventListener('mouseleave', function() { this.style.transform = 'scale(1)'; });
+                cell.addEventListener('click', function() { alert('Detalles:\n' + this.title); });
             });
         });
     </script>
