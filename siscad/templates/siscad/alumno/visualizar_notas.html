@@ -20,6 +20,10 @@
         .progress { height: 20px; }
         .table-notas th { background-color: #f8f9fa; }
         .estadistica-numero { font-size: 2rem; font-weight: bold; }
+        .progreso-global { background: linear-gradient(90deg, #e9ecef 0%, #e9ecef 100%); }
+        .nota-vacia { color: #6c757d; font-style: italic; }
+        .btn-descargar { transition: all 0.3s; }
+        .btn-descargar:hover { transform: scale(1.05); }
     </style>
 </head>
 <body>
@@ -28,12 +32,59 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h1 class="h3">
-                        <i class="bi bi-journal-text"></i> Mis Notas Académicas
-                    </h1>
+                    <div>
+                        <h1 class="h3">
+                            <i class="bi bi-journal-text"></i> Mis Notas Académicas
+                        </h1>
+                        <p class="text-muted mb-0">Bienvenido a tu portal académico</p>
+                    </div>
                     <div class="text-end">
                         <h5 class="mb-1">{{ alumno.nombre }}</h5>
-                        <small class="text-muted">Semestre {{ semestre_actual }}</small>
+                        <small class="text-muted">DNI: {{ alumno.dni }} | Semestre {{ semestre_actual }}</small>
+                        <br>
+                        <form method="post" class="mt-2">
+                            {% csrf_token %}
+                            <button type="submit" name="descargar_excel" class="btn btn-success btn-sm btn-descargar">
+                                <i class="bi bi-file-earmark-excel"></i> Descargar Libreta
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progreso General -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-clipboard-data"></i> Progreso General</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h6>Avance de Evaluación General</h6>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar 
+                                        {% if estadisticas.progreso_general < 50 %}bg-warning
+                                        {% elif estadisticas.progreso_general < 80 %}bg-info
+                                        {% else %}bg-success{% endif %}" 
+                                        role="progressbar" 
+                                        style="width: {{ estadisticas.progreso_general }}%">
+                                        {{ estadisticas.progreso_general }}%
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    {{ estadisticas.total_notas_registradas }} de {{ estadisticas.total_notas_esperadas }} notas registradas en total
+                                </small>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="border rounded p-3">
+                                    <div class="estadistica-numero text-primary">{{ estadisticas.progreso_general }}%</div>
+                                    <small class="text-muted">Progreso Total</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -82,6 +133,34 @@
                             </div>
                         </div>
 
+                        <!-- Estadísticas adicionales -->
+                        <div class="row text-center">
+                            <div class="col-md-4 mb-3">
+                                <div class="card card-estadistica border-secondary">
+                                    <div class="card-body">
+                                        <div class="estadistica-numero text-secondary">{{ estadisticas.mejor_nota }}</div>
+                                        <small class="text-muted">Mejor Nota</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card card-estadistica border-secondary">
+                                    <div class="card-body">
+                                        <div class="estadistica-numero text-secondary">{{ estadisticas.peor_nota }}</div>
+                                        <small class="text-muted">Peor Nota</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card card-estadistica border-info">
+                                    <div class="card-body">
+                                        <div class="estadistica-numero text-info">{{ estadisticas.cursos_con_sustitutorio }}</div>
+                                        <small class="text-muted">Con Sustitutorio</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Gráficos -->
                         <div class="row mt-4">
                             <div class="col-md-6">
@@ -91,6 +170,13 @@
                                     </div>
                                     <div class="card-body">
                                         <canvas id="chartEstadoCursos" width="400" height="200"></canvas>
+                                        <div class="text-center mt-2">
+                                            <small class="text-muted">
+                                                Aprobados: {{ estadisticas.porcentaje_aprobados }}% | 
+                                                En proceso: {{ estadisticas.porcentaje_en_proceso }}% | 
+                                                Desaprobados: {{ estadisticas.porcentaje_desaprobados }}%
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -114,18 +200,23 @@
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header bg-dark text-white">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-list-check"></i> Detalle por Curso</h5>
+                        <span class="badge bg-light text-dark">
+                            {{ notas_por_curso|length }} cursos encontrados
+                        </span>
                     </div>
                     <div class="card-body">
                         {% if notas_por_curso %}
                             {% for curso_data in notas_por_curso %}
-                            <div class="card mb-4">
+                            <div class="card mb-4 border-{% if curso_data.estado == 'aprobado' %}success{% elif curso_data.estado == 'desaprobado' %}danger{% else %}warning{% endif %}">
                                 <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">
-                                        {{ curso_data.nombre_curso }} 
-                                        <small class="text-muted">({{ curso_data.codigo_curso }}) - Turno {{ curso_data.turno }}</small>
-                                    </h6>
+                                    <div>
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-book"></i> {{ curso_data.nombre_curso }} 
+                                            <small class="text-muted">({{ curso_data.codigo_curso }}) - Turno {{ curso_data.turno }}</small>
+                                        </h6>
+                                    </div>
                                     <div>
                                         {% if curso_data.promedio_final %}
                                             <span class="badge {% if curso_data.estado == 'aprobado' %}badge-aprobado{% elif curso_data.estado == 'desaprobado' %}badge-desaprobado{% else %}badge-en-proceso{% endif %}">
@@ -137,10 +228,15 @@
                                     </div>
                                 </div>
                                 <div class="card-body">
-                                    <!-- Barra de Progreso -->
+                                    <!-- Barra de Progreso del Curso -->
                                     <div class="mb-3">
                                         <div class="d-flex justify-content-between mb-1">
-                                            <small>Progreso de Evaluación</small>
+                                            <small>
+                                                <i class="bi bi-clock"></i> Progreso de Evaluación
+                                                {% if curso_data.total_notas_registradas == curso_data.total_notas_esperadas %}
+                                                    <i class="bi bi-check-circle text-success ms-1"></i>
+                                                {% endif %}
+                                            </small>
                                             <small>{{ curso_data.progreso }}%</small>
                                         </div>
                                         <div class="progress">
@@ -162,14 +258,15 @@
                                         <!-- Notas Parciales -->
                                         {% if curso_data.configuracion_curso.tiene_parciales %}
                                         <div class="col-md-6">
-                                            <h6>Notas Parciales</h6>
+                                            <h6><i class="bi bi-file-text"></i> Notas Parciales</h6>
                                             <div class="table-responsive">
-                                                <table class="table table-sm table-bordered">
-                                                    <thead>
+                                                <table class="table table-sm table-bordered table-hover">
+                                                    <thead class="table-light">
                                                         <tr>
                                                             <th>Parcial</th>
                                                             <th>Nota</th>
                                                             <th>Peso</th>
+                                                            <th>Estado</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -177,13 +274,20 @@
                                                         <tr>
                                                             <td>Parcial {{ parcial.periodo }}</td>
                                                             <td>
-                                                                {% if parcial.nota is not None %}
-                                                                    {{ parcial.nota }}
+                                                                {% if parcial.tiene_nota %}
+                                                                    <strong>{{ parcial.nota }}</strong>
                                                                 {% else %}
-                                                                    <span class="text-muted">-</span>
+                                                                    <span class="nota-vacia">No evaluado</span>
                                                                 {% endif %}
                                                             </td>
                                                             <td>{{ parcial.peso }}%</td>
+                                                            <td>
+                                                                {% if parcial.tiene_nota %}
+                                                                    <i class="bi bi-check-circle text-success"></i>
+                                                                {% else %}
+                                                                    <i class="bi bi-clock text-warning"></i>
+                                                                {% endif %}
+                                                            </td>
                                                         </tr>
                                                         {% endfor %}
                                                     </tbody>
@@ -195,14 +299,15 @@
                                         <!-- Notas Continuas -->
                                         {% if curso_data.configuracion_curso.tiene_continua %}
                                         <div class="col-md-6">
-                                            <h6>Notas Continuas</h6>
+                                            <h6><i class="bi bi-check-square"></i> Notas Continuas</h6>
                                             <div class="table-responsive">
-                                                <table class="table table-sm table-bordered">
-                                                    <thead>
+                                                <table class="table table-sm table-bordered table-hover">
+                                                    <thead class="table-light">
                                                         <tr>
                                                             <th>Continua</th>
                                                             <th>Nota</th>
                                                             <th>Peso</th>
+                                                            <th>Estado</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -210,13 +315,20 @@
                                                         <tr>
                                                             <td>Continua {{ continua.periodo }}</td>
                                                             <td>
-                                                                {% if continua.nota is not None %}
-                                                                    {{ continua.nota }}
+                                                                {% if continua.tiene_nota %}
+                                                                    <strong>{{ continua.nota }}</strong>
                                                                 {% else %}
-                                                                    <span class="text-muted">-</span>
+                                                                    <span class="nota-vacia">No evaluado</span>
                                                                 {% endif %}
                                                             </td>
                                                             <td>{{ continua.peso }}%</td>
+                                                            <td>
+                                                                {% if continua.tiene_nota %}
+                                                                    <i class="bi bi-check-circle text-success"></i>
+                                                                {% else %}
+                                                                    <i class="bi bi-clock text-warning"></i>
+                                                                {% endif %}
+                                                            </td>
                                                         </tr>
                                                         {% endfor %}
                                                     </tbody>
@@ -227,13 +339,18 @@
                                     </div>
 
                                     <!-- Sustitutorio -->
-                                    {% if curso_data.nota_sustitutorio %}
+                                    {% if curso_data.tiene_sustitutorio %}
                                     <div class="row mt-3">
                                         <div class="col-12">
                                             <div class="alert alert-info">
-                                                <h6><i class="bi bi-arrow-repeat"></i> Sustitutorio Aplicado</h6>
-                                                <p class="mb-0">Nota de Sustitutorio: <strong>{{ curso_data.nota_sustitutorio }}</strong></p>
-                                                <small class="text-muted">Esta nota reemplaza la más baja entre Parcial 1 y Parcial 2</small>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi bi-arrow-repeat display-6 me-3"></i>
+                                                    <div>
+                                                        <h6 class="mb-1">Sustitutorio Aplicado</h6>
+                                                        <p class="mb-0">Nota de Sustitutorio: <strong>{{ curso_data.nota_sustitutorio }}</strong></p>
+                                                        <small class="text-muted">Esta nota reemplaza la más baja entre Parcial 1 y Parcial 2</small>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -246,15 +363,37 @@
                                             <div class="alert {% if curso_data.estado == 'aprobado' %}alert-success{% else %}alert-danger{% endif %}">
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div>
-                                                        <h6 class="mb-1">Nota Final: {{ curso_data.promedio_final }}</h6>
+                                                        <h6 class="mb-1">
+                                                            <i class="bi bi-award"></i> Nota Final: {{ curso_data.promedio_final }}
+                                                        </h6>
                                                         <p class="mb-0">Estado: <strong>{{ curso_data.estado|title }}</strong></p>
+                                                        {% if curso_data.estado == 'aprobado' %}
+                                                            <small class="mb-0">¡Felicidades! Has aprobado este curso.</small>
+                                                        {% else %}
+                                                            <small class="mb-0">Necesitas mejorar tu rendimiento en este curso.</small>
+                                                        {% endif %}
                                                     </div>
                                                     <div class="text-end">
                                                         {% if curso_data.estado == 'aprobado' %}
-                                                            <i class="bi bi-check-circle-fill display-6 text-success"></i>
+                                                            <i class="bi bi-trophy-fill display-4 text-success"></i>
                                                         {% else %}
-                                                            <i class="bi bi-exclamation-circle-fill display-6 text-danger"></i>
+                                                            <i class="bi bi-exclamation-triangle-fill display-4 text-danger"></i>
                                                         {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <div class="alert alert-warning">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi bi-clock-history display-6 me-3"></i>
+                                                    <div>
+                                                        <h6 class="mb-1">Curso en Proceso</h6>
+                                                        <p class="mb-0">Aún faltan notas por registrar para calcular la nota final.</p>
+                                                        <small class="mb-0">Progreso actual: {{ curso_data.progreso }}% completado</small>
                                                     </div>
                                                 </div>
                                             </div>
@@ -265,12 +404,27 @@
                             </div>
                             {% endfor %}
                         {% else %}
-                            <div class="text-center py-4">
+                            <div class="text-center py-5">
                                 <i class="bi bi-inbox display-1 text-muted"></i>
                                 <h4 class="text-muted mt-3">No tienes cursos matriculados</h4>
                                 <p class="text-muted">No se encontraron cursos para mostrar las notas.</p>
                             </div>
                         {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Informativo -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card border-0 bg-light">
+                    <div class="card-body text-center">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> 
+                            Sistema Académico - Tus notas se actualizan automáticamente. 
+                            Para cualquier discrepancia, contacta con tu coordinador académico.
+                        </small>
                     </div>
                 </div>
             </div>
@@ -294,7 +448,9 @@
                         '#28a745',
                         '#ffc107', 
                         '#dc3545'
-                    ]
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
                 }]
             },
             options: {
@@ -302,6 +458,17 @@
                 plugins: {
                     legend: {
                         position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label;
+                                const value = context.raw;
+                                const total = {{ estadisticas.total_cursos }};
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
                     }
                 }
             }
@@ -309,7 +476,7 @@
 
         // Gráfico de rendimiento
         const ctxRendimiento = document.getElementById('chartRendimiento').getContext('2d');
-        const cursos = [{% for curso in notas_por_curso %}'{{ curso.nombre_curso|slice:":15" }}...',{% endfor %}];
+        const cursos = [{% for curso in notas_por_curso %}'{{ curso.nombre_curso|slice:":12" }}...',{% endfor %}];
         const promedios = [{% for curso in notas_por_curso %}{{ curso.promedio_final|default:0 }},{% endfor %}];
         
         new Chart(ctxRendimiento, {
@@ -317,10 +484,20 @@
             data: {
                 labels: cursos,
                 datasets: [{
-                    label: 'Promedio',
+                    label: 'Promedio por Curso',
                     data: promedios,
-                    backgroundColor: promedios.map(p => p >= 13 ? '#28a745' : p > 0 ? '#ffc107' : '#6c757d'),
-                    borderColor: promedios.map(p => p >= 13 ? '#218838' : p > 0 ? '#e0a800' : '#545b62'),
+                    backgroundColor: promedios.map(p => {
+                        if (p >= 13) return '#28a745';
+                        if (p >= 10.5) return '#17a2b8';
+                        if (p > 0) return '#ffc107';
+                        return '#6c757d';
+                    }),
+                    borderColor: promedios.map(p => {
+                        if (p >= 13) return '#218838';
+                        if (p >= 10.5) return '#138496';
+                        if (p > 0) return '#e0a800';
+                        return '#545b62';
+                    }),
                     borderWidth: 1
                 }]
             },
@@ -332,16 +509,43 @@
                         max: 20,
                         title: {
                             display: true,
-                            text: 'Nota'
+                            text: 'Nota Final'
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
                         }
                     }
                 },
                 plugins: {
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const cursoIndex = context.dataIndex;
+                                const curso = {{ notas_por_curso|length }} > cursoIndex ? 
+                                    '{{ notas_por_curso.0.nombre_curso|escapejs }}' : 'Curso';
+                                return `${curso}: ${context.parsed.y}`;
+                            }
+                        }
                     }
                 }
             }
+        });
+
+        // Animación para las tarjetas de estadísticas
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card-estadistica');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.classList.add('animate__animated', 'animate__fadeInUp');
+            });
         });
     </script>
 
