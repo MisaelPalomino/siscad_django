@@ -2010,7 +2010,7 @@ def reservar_aula(request):
 
         messages.success(
             request,
-            f"✅ Reserva realizada con éxito para el aula {aula.nombre} el {fecha_seleccionada}.",
+            f" Reserva realizada con éxito para el aula {aula.nombre} el {fecha_seleccionada}.",
         )
         return redirect("reservar_aula")
 
@@ -2067,11 +2067,11 @@ def cancelar_reserva(request, reserva_id):
         profesor.cantidad_reservas += 1
         profesor.save()
 
-        messages.success(request, "✅ Reserva cancelada exitosamente.")
+        messages.success(request, " Reserva cancelada exitosamente.")
     else:
         messages.error(
             request,
-            "⚠️ No puedes cancelar una reserva que ya ha comenzado o cuya fecha ha pasado.",
+            " No puedes cancelar una reserva que ya ha comenzado o cuya fecha ha pasado.",
         )
 
     return redirect("reservar_aula")

@@ -1109,9 +1109,9 @@ def generar_horarios_modeloA():
             ruta_archivo.replace(".xlsx", "_problemas.xlsx"), index=False
         )
 
-    print(f"✅ Horarios generados y exportados a: {ruta_archivo}")
+    print(f" Horarios generados y exportados a: {ruta_archivo}")
     if problemas:
-        print(f"⚠️ {len(problemas)} conflictos detectados.")
+        print(f" {len(problemas)} conflictos detectados.")
 
     return ruta_archivo
 
@@ -1334,7 +1334,7 @@ def insertar_matriculas_laboratorio():
                 errores += 1
                 continue
 
-        print(f"\n📊 Resumen del proceso:")
+        print(f"\n Resumen del proceso:")
         print(f"   Matrículas procesadas: {matriculas_sin_lab.count()}")
         print(f"   Matrículas creadas: {matriculas_creadas}")
         print(f"   Errores: {errores}")
@@ -1803,7 +1803,7 @@ def mostrar_estadisticas_asistencias_profesores():
     Muestra estadísticas de las asistencias generadas para profesores
     """
     print("\n" + "=" * 60)
-    print("📊 ESTADÍSTICAS DE ASISTENCIAS DE PROFESORES 2025")
+    print(" ESTADÍSTICAS DE ASISTENCIAS DE PROFESORES 2025")
     print("=" * 60)
 
     total_asistencias = AsistenciaProfesor.objects.count()
