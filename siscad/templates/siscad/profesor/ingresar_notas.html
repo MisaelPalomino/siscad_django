@@ -52,6 +52,12 @@
             max-height: 70vh;
             overflow-y: auto;
         }
+        .nota-vacia {
+            background-color: #fff3cd;
+        }
+        .nota-valida {
+            background-color: #d1edff;
+        }
     </style>
 </head>
 <body>
@@ -94,6 +100,12 @@
                             <a class="nav-link active" href="#">
                                 <i class="bi bi-pencil-square"></i>
                                 Ingresar Notas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'revisar_estadisticas' %}">
+                                <i class="bi bi-graph-up"></i>
+                                Estadísticas
                             </a>
                         </li>
                         <li class="nav-item">
@@ -182,6 +194,36 @@
                     </div>
 
                     {% if grupo_seleccionado %}
+                    <!-- Información del Estado de Evaluación -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-clipboard-data"></i>
+                                Estado de Evaluación
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <div class="fw-bold text-primary fs-4">{{ alumnos_grupo|length }}</div>
+                                    <small class="text-muted">Total Alumnos</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="fw-bold text-success fs-4" id="alumnos-evaluados">0</div>
+                                    <small class="text-muted">Alumnos con Notas</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="fw-bold text-warning fs-4" id="alumnos-pendientes">0</div>
+                                    <small class="text-muted">Alumnos Pendientes</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="fw-bold text-secondary fs-4" id="porcentaje-avance">0%</div>
+                                    <small class="text-muted">Avance de Evaluación</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Opciones de Carga -->
                     <div class="card mb-4">
                         <div class="card-header bg-success text-white">
@@ -210,9 +252,14 @@
                                 <!-- Pestaña Carga Manual -->
                                 <div class="tab-pane fade show active" id="manual" role="tabpanel">
                                     {% if alumnos_grupo %}
-                                    <form method="post">
+                                    <form method="post" id="form-notas">
                                         {% csrf_token %}
                                         <input type="hidden" name="grupo_id" value="{{ grupo_seleccionado.id }}">
+                                        
+                                        <div class="alert alert-info mb-3">
+                                            <i class="bi bi-info-circle"></i>
+                                            <strong>Instrucciones:</strong> Ingrese las notas entre 0 y 20. Deje vacío para marcar como "no evaluado".
+                                        </div>
                                         
                                         <div class="table-responsive">
                                             <table class="table table-striped table-hover">
@@ -264,24 +311,36 @@
                                                         <td>
                                                             <input type="number" step="0.1" min="0" max="20" 
                                                                    name="continua_{{ dato.alumno.id }}_1" 
-                                                                   value="{% if dato.notas_continua.1 %}{{ dato.notas_continua.1 }}{% endif %}"
-                                                                   class="form-control form-control-sm" placeholder="0.0">
+                                                                   value="{% if dato.notas_continua.1 and dato.notas_continua.1 >= 0 %}{{ dato.notas_continua.1 }}{% endif %}"
+                                                                   class="form-control form-control-sm nota-input" 
+                                                                   placeholder="No evaluado"
+                                                                   data-alumno="{{ dato.alumno.id }}"
+                                                                   data-tipo="C"
+                                                                   data-periodo="1">
                                                         </td>
                                                         {% endif %}
                                                         {% if grupo_seleccionado.curso.peso_continua_2 > 0 %}
                                                         <td>
                                                             <input type="number" step="0.1" min="0" max="20" 
                                                                    name="continua_{{ dato.alumno.id }}_2" 
-                                                                   value="{% if dato.notas_continua.2 %}{{ dato.notas_continua.2 }}{% endif %}"
-                                                                   class="form-control form-control-sm" placeholder="0.0">
+                                                                   value="{% if dato.notas_continua.2 and dato.notas_continua.2 >= 0 %}{{ dato.notas_continua.2 }}{% endif %}"
+                                                                   class="form-control form-control-sm nota-input" 
+                                                                   placeholder="No evaluado"
+                                                                   data-alumno="{{ dato.alumno.id }}"
+                                                                   data-tipo="C"
+                                                                   data-periodo="2">
                                                         </td>
                                                         {% endif %}
                                                         {% if grupo_seleccionado.curso.peso_continua_3 > 0 %}
                                                         <td>
                                                             <input type="number" step="0.1" min="0" max="20" 
                                                                    name="continua_{{ dato.alumno.id }}_3" 
-                                                                   value="{% if dato.notas_continua.3 %}{{ dato.notas_continua.3 }}{% endif %}"
-                                                                   class="form-control form-control-sm" placeholder="0.0">
+                                                                   value="{% if dato.notas_continua.3 and dato.notas_continua.3 >= 0 %}{{ dato.notas_continua.3 }}{% endif %}"
+                                                                   class="form-control form-control-sm nota-input" 
+                                                                   placeholder="No evaluado"
+                                                                   data-alumno="{{ dato.alumno.id }}"
+                                                                   data-tipo="C"
+                                                                   data-periodo="3">
                                                         </td>
                                                         {% endif %}
                                                         
@@ -290,24 +349,36 @@
                                                         <td>
                                                             <input type="number" step="0.1" min="0" max="20" 
                                                                    name="parcial_{{ dato.alumno.id }}_1" 
-                                                                   value="{% if dato.notas_parcial.1 %}{{ dato.notas_parcial.1 }}{% endif %}"
-                                                                   class="form-control form-control-sm" placeholder="0.0">
+                                                                   value="{% if dato.notas_parcial.1 and dato.notas_parcial.1 >= 0 %}{{ dato.notas_parcial.1 }}{% endif %}"
+                                                                   class="form-control form-control-sm nota-input" 
+                                                                   placeholder="No evaluado"
+                                                                   data-alumno="{{ dato.alumno.id }}"
+                                                                   data-tipo="P"
+                                                                   data-periodo="1">
                                                         </td>
                                                         {% endif %}
                                                         {% if grupo_seleccionado.curso.peso_parcial_2 > 0 %}
                                                         <td>
                                                             <input type="number" step="0.1" min="0" max="20" 
                                                                    name="parcial_{{ dato.alumno.id }}_2" 
-                                                                   value="{% if dato.notas_parcial.2 %}{{ dato.notas_parcial.2 }}{% endif %}"
-                                                                   class="form-control form-control-sm" placeholder="0.0">
+                                                                   value="{% if dato.notas_parcial.2 and dato.notas_parcial.2 >= 0 %}{{ dato.notas_parcial.2 }}{% endif %}"
+                                                                   class="form-control form-control-sm nota-input" 
+                                                                   placeholder="No evaluado"
+                                                                   data-alumno="{{ dato.alumno.id }}"
+                                                                   data-tipo="P"
+                                                                   data-periodo="2">
                                                         </td>
                                                         {% endif %}
                                                         {% if grupo_seleccionado.curso.peso_parcial_3 > 0 %}
                                                         <td>
                                                             <input type="number" step="0.1" min="0" max="20" 
                                                                    name="parcial_{{ dato.alumno.id }}_3" 
-                                                                   value="{% if dato.notas_parcial.3 %}{{ dato.notas_parcial.3 }}{% endif %}"
-                                                                   class="form-control form-control-sm" placeholder="0.0">
+                                                                   value="{% if dato.notas_parcial.3 and dato.notas_parcial.3 >= 0 %}{{ dato.notas_parcial.3 }}{% endif %}"
+                                                                   class="form-control form-control-sm nota-input" 
+                                                                   placeholder="No evaluado"
+                                                                   data-alumno="{{ dato.alumno.id }}"
+                                                                   data-tipo="P"
+                                                                   data-periodo="3">
                                                         </td>
                                                         {% endif %}
                                                         
@@ -316,8 +387,12 @@
                                                         <td>
                                                             <input type="number" step="0.1" min="0" max="20" 
                                                                    name="sustitutorio_{{ dato.alumno.id }}" 
-                                                                   value="{% if dato.nota_sustitutorio %}{{ dato.nota_sustitutorio }}{% endif %}"
-                                                                   class="form-control form-control-sm" placeholder="0.0">
+                                                                   value="{% if dato.nota_sustitutorio and dato.nota_sustitutorio >= 0 %}{{ dato.nota_sustitutorio }}{% endif %}"
+                                                                   class="form-control form-control-sm nota-input" 
+                                                                   placeholder="No evaluado"
+                                                                   data-alumno="{{ dato.alumno.id }}"
+                                                                   data-tipo="S"
+                                                                   data-periodo="1">
                                                         </td>
                                                         {% endif %}
                                                     </tr>
@@ -327,13 +402,21 @@
                                         </div>
                                         
                                         <div class="d-flex justify-content-between align-items-center mt-3">
-                                            <small class="text-muted">
-                                                <i class="bi bi-info-circle"></i>
-                                                Total de alumnos: {{ alumnos_grupo|length }}
-                                            </small>
-                                            <button type="submit" name="guardar_manual" class="btn btn-success">
-                                                <i class="bi bi-check-lg"></i> Guardar Todas las Notas
-                                            </button>
+                                            <div>
+                                                <small class="text-muted">
+                                                    <i class="bi bi-info-circle"></i>
+                                                    Total de alumnos: {{ alumnos_grupo|length }} | 
+                                                    <span id="estado-evaluacion">Calculando...</span>
+                                                </small>
+                                            </div>
+                                            <div>
+                                                <button type="button" id="btn-limpiar" class="btn btn-outline-warning me-2">
+                                                    <i class="bi bi-eraser"></i> Limpiar Todo
+                                                </button>
+                                                <button type="submit" name="guardar_manual" class="btn btn-success">
+                                                    <i class="bi bi-check-lg"></i> Guardar Todas las Notas
+                                                </button>
+                                            </div>
                                         </div>
                                     </form>
                                     {% else %}
@@ -353,7 +436,7 @@
                                             <li><strong>Columnas requeridas:</strong> dni_alumno, tipo_nota, periodo, valor</li>
                                             <li><strong>tipo_nota:</strong> C (Continua), P (Parcial), S (Sustitutorio)</li>
                                             <li><strong>periodo:</strong> 1, 2, 3 para continua/parcial, 1 para sustitutorio</li>
-                                            <li><strong>valor:</strong> Nota entre 0 y 20</li>
+                                            <li><strong>valor:</strong> Nota entre 0 y 20 (deje vacío para "no evaluado")</li>
                                             <li><strong>Nota:</strong> Solo se procesarán las notas que coincidan con la configuración del curso</li>
                                         </ul>
                                     </div>
@@ -364,7 +447,7 @@
                                                 <div class="card-body text-center">
                                                     <i class="bi bi-file-earmark-arrow-down display-4 text-primary"></i>
                                                     <h5 class="card-title">Descargar Plantilla</h5>
-                                                    <p class="card-text">Obtenga la plantilla con la estructura correcta</p>
+                                                    <p class="card-text">Obtenga la plantilla con la estructura correcta y datos existentes</p>
                                                     <a href="{% url 'descargar_plantilla_excel' grupo_seleccionado.id %}" 
                                                        class="btn btn-outline-primary">
                                                         <i class="bi bi-download"></i> Descargar Plantilla
@@ -409,6 +492,7 @@
                                                         <th>tipo_nota</th>
                                                         <th>periodo</th>
                                                         <th>valor</th>
+                                                        <th>Descripción</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -417,36 +501,35 @@
                                                         <td>C</td>
                                                         <td>1</td>
                                                         <td>15.5</td>
+                                                        <td><small class="text-success">Nota válida</small></td>
                                                     </tr>
                                                     <tr>
                                                         <td>12345678</td>
                                                         <td>C</td>
                                                         <td>2</td>
-                                                        <td>16.0</td>
+                                                        <td>(vacío)</td>
+                                                        <td><small class="text-warning">No evaluado</small></td>
                                                     </tr>
                                                     <tr>
                                                         <td>12345678</td>
                                                         <td>P</td>
                                                         <td>1</td>
                                                         <td>14.0</td>
+                                                        <td><small class="text-success">Nota válida</small></td>
                                                     </tr>
                                                     <tr>
                                                         <td>12345678</td>
                                                         <td>P</td>
                                                         <td>2</td>
                                                         <td>13.5</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>12345678</td>
-                                                        <td>P</td>
-                                                        <td>3</td>
-                                                        <td>15.0</td>
+                                                        <td><small class="text-success">Nota válida</small></td>
                                                     </tr>
                                                     <tr>
                                                         <td>12345678</td>
                                                         <td>S</td>
                                                         <td>1</td>
                                                         <td>16.5</td>
+                                                        <td><small class="text-success">Nota válida</small></td>
                                                     </tr>
                                                 </tbody>
                                             </table>
@@ -521,6 +604,45 @@
     <script>
         // Script para mejorar la experiencia de usuario
         document.addEventListener('DOMContentLoaded', function() {
+            const totalAlumnos = {{ alumnos_grupo|length|default:0 }};
+            
+            // Función para calcular el estado de evaluación
+            function calcularEstadoEvaluacion() {
+                const inputs = document.querySelectorAll('.nota-input');
+                let alumnosConNotas = new Set();
+                let totalNotasValidas = 0;
+                
+                inputs.forEach(input => {
+                    const value = parseFloat(input.value);
+                    if (!isNaN(value) && value >= 0 && value <= 20) {
+                        totalNotasValidas++;
+                        alumnosConNotas.add(input.getAttribute('data-alumno'));
+                        
+                        // Aplicar estilo visual
+                        input.classList.remove('nota-vacia');
+                        input.classList.add('nota-valida');
+                    } else {
+                        input.classList.remove('nota-valida');
+                        input.classList.add('nota-vacia');
+                    }
+                });
+                
+                const alumnosEvaluados = alumnosConNotas.size;
+                const alumnosPendientes = totalAlumnos - alumnosEvaluados;
+                const porcentajeAvance = totalAlumnos > 0 ? Math.round((alumnosEvaluados / totalAlumnos) * 100) : 0;
+                
+                // Actualizar estadísticas
+                document.getElementById('alumnos-evaluados').textContent = alumnosEvaluados;
+                document.getElementById('alumnos-pendientes').textContent = alumnosPendientes;
+                document.getElementById('porcentaje-avance').textContent = porcentajeAvance + '%';
+                
+                // Actualizar texto de estado
+                const estadoElement = document.getElementById('estado-evaluacion');
+                if (estadoElement) {
+                    estadoElement.textContent = `${alumnosEvaluados} evaluados, ${alumnosPendientes} pendientes (${porcentajeAvance}% de avance)`;
+                }
+            }
+            
             // Auto-focus en el primer campo de entrada cuando se cambia de pestaña
             const tabs = document.querySelectorAll('button[data-bs-toggle="tab"]');
             tabs.forEach(tab => {
@@ -533,19 +655,19 @@
                 });
             });
 
-            // Validación de notas en tiempo real
-            const inputs = document.querySelectorAll('input[type="number"]');
+            // Validación de notas en tiempo real y cálculo de estado
+            const inputs = document.querySelectorAll('.nota-input');
             inputs.forEach(input => {
                 input.addEventListener('change', function() {
                     const value = parseFloat(this.value);
-                    if (value < 0 || value > 20) {
+                    if (this.value && (value < 0 || value > 20)) {
                         this.classList.add('is-invalid');
-                        // Mostrar tooltip de error
                         this.title = 'La nota debe estar entre 0 y 20';
                     } else {
                         this.classList.remove('is-invalid');
                         this.title = '';
                     }
+                    calcularEstadoEvaluacion();
                 });
 
                 // Validación al escribir
@@ -556,20 +678,40 @@
                     } else {
                         this.classList.remove('is-invalid');
                     }
+                    calcularEstadoEvaluacion();
                 });
             });
 
+            // Botón para limpiar todos los campos
+            document.getElementById('btn-limpiar')?.addEventListener('click', function() {
+                if (confirm('¿Está seguro de que desea limpiar todos los campos? Se perderán los datos no guardados.')) {
+                    inputs.forEach(input => {
+                        input.value = '';
+                        input.classList.remove('is-invalid', 'nota-valida');
+                        input.classList.add('nota-vacia');
+                    });
+                    calcularEstadoEvaluacion();
+                }
+            });
+
             // Confirmación antes de guardar
-            const form = document.querySelector('form');
+            const form = document.getElementById('form-notas');
             if (form) {
                 form.addEventListener('submit', function(e) {
                     const invalidInputs = form.querySelectorAll('.is-invalid');
                     if (invalidInputs.length > 0) {
                         e.preventDefault();
                         alert('Por favor, corrija las notas que están fuera del rango permitido (0-20) antes de guardar.');
+                    } else {
+                        if (!confirm('¿Está seguro de que desea guardar todas las notas?')) {
+                            e.preventDefault();
+                        }
                     }
                 });
             }
+
+            // Calcular estado inicial
+            calcularEstadoEvaluacion();
         });
     </script>
 </body>

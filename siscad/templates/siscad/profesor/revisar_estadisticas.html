@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estadísticas - Sistema Académico</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .card-estadistica { transition: transform 0.2s; }
+        .card-estadistica:hover { transform: translateY(-5px); }
+        .estadistica-numero { font-size: 2rem; font-weight: bold; }
+        .table-stats th { background-color: #f8f9fa; }
+        .navbar-custom { background-color: #2c3e50; }
+        .sidebar { background-color: #34495e; min-height: 100vh; color: white; }
+        .sidebar .nav-link { color: #ecf0f1; padding: 10px 15px; }
+        .sidebar .nav-link:hover { background-color: #3c5a78; color: white; }
+        .sidebar .nav-link.active { background-color: #3498db; }
+        .main-content { background-color: #ecf0f1; min-height: 100vh; }
+        .badge-aprobado { background-color: #28a745; }
+        .badge-desaprobado { background-color: #dc3545; }
+        .badge-en-proceso { background-color: #ffc107; color: #000; }
+        .progreso-container { background: #f8f9fa; border-radius: 10px; padding: 15px; }
+        .progreso-item { margin-bottom: 15px; }
+        .progreso-header { display: flex; justify-content: between; align-items: center; margin-bottom: 5px; }
+        .progreso-bar { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
+        .progreso-fill { height: 100%; background: linear-gradient(90deg, #28a745, #20c997); }
+        .progreso-fill-warning { background: linear-gradient(90deg, #ffc107, #fd7e14); }
+        .evaluacion-stats { font-size: 0.85rem; color: #6c757d; }
+        .estado-evaluacion { font-size: 0.75rem; }
+        .sin-datos { color: #6c757d; font-style: italic; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-journal-bookmark-fill"></i>
+                Sistema Académico
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i>
+                        {{ request.user.username }}
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> Mi Perfil</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'admin:logout' %}"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar d-md-block">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-speedometer2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'ingresar_notas' %}">
+                                <i class="bi bi-pencil-square"></i>
+                                Ingresar Notas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#">
+                                <i class="bi bi-graph-up"></i>
+                                Estadísticas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-list-check"></i>
+                                Mis Cursos
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-calendar-event"></i>
+                                Horarios
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-bar-chart-line"></i>
+                                Reportes
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="container-fluid py-4">
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h1 class="h3">
+                                <i class="bi bi-graph-up"></i> Estadísticas del Curso
+                            </h1>
+                        </div>
+                    </div>
+
+                    <!-- Mensajes -->
+                    {% if messages %}
+                    <div class="mb-4">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {% if message.tags == 'success' %}
+                                <i class="bi bi-check-circle-fill"></i>
+                            {% elif message.tags == 'error' %}
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            {% else %}
+                                <i class="bi bi-info-circle-fill"></i>
+                            {% endif %}
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Selección de Grupo -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">Seleccionar Grupo de Teoría</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <select name="grupo_id" class="form-select" onchange="this.form.submit()">
+                                                    <option value="">Seleccione un grupo</option>
+                                                    {% for grupo in grupos_teoria %}
+                                                        <option value="{{ grupo.id }}" 
+                                                            {% if grupo_seleccionado and grupo_seleccionado.id == grupo.id %}selected{% endif %}>
+                                                            {{ grupo.curso.nombre }} - Turno {{ grupo.get_turno_display }}
+                                                        </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if grupo_seleccionado %}
+                    <!-- Progreso de Evaluación -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0"><i class="bi bi-clipboard-data"></i> Progreso de Evaluación</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <!-- Progreso de Parciales -->
+                                        {% if estadisticas_detalladas.parciales %}
+                                        <div class="col-md-6">
+                                            <h6 class="mb-3">Parciales</h6>
+                                            {% for periodo, datos in estadisticas_detalladas.parciales.items %}
+                                            <div class="progreso-item">
+                                                <div class="progreso-header">
+                                                    <strong>{{ periodo }}</strong>
+                                                    <span class="evaluacion-stats">
+                                                        {{ datos.alumnos_con_nota }}/{{ estadisticas_generales.total_alumnos }} con nota
+                                                        {% if datos.tiene_datos %}
+                                                            ({{ datos.promedio }} promedio)
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                                <div class="progreso-bar">
+                                                    {% if estadisticas_generales.total_alumnos > 0 %}
+                                                        {% widthratio datos.alumnos_con_nota estadisticas_generales.total_alumnos 100 as porcentaje %}
+                                                        <div class="progreso-fill {% if porcentaje < 50 %}progreso-fill-warning{% endif %}" style="width: {{ porcentaje }}%"></div>
+                                                    {% else %}
+                                                        <div class="progreso-fill" style="width: 0%"></div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="evaluacion-stats mt-1">
+                                                    {% if datos.tiene_datos %}
+                                                        <span class="text-success">
+                                                            <i class="bi bi-check-circle"></i> {{ datos.alumnos_con_nota }} con nota
+                                                        </span>
+                                                        <span class="text-muted mx-2">|</span>
+                                                        <span class="text-warning">
+                                                            <i class="bi bi-clock"></i> {{ datos.alumnos_sin_nota }} sin nota
+                                                        </span>
+                                                        {% if datos.alumnos_evaluados > datos.alumnos_con_nota %}
+                                                        <span class="text-muted mx-2">|</span>
+                                                        <span class="text-info">
+                                                            <i class="bi bi-dash-circle"></i> {{ datos.alumnos_evaluados|add:"-"|add:datos.alumnos_con_nota }} no evaluados
+                                                        </span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="text-danger">
+                                                            <i class="bi bi-exclamation-triangle"></i> Sin evaluaciones registradas
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Progreso de Continuas -->
+                                        {% if estadisticas_detalladas.continuas %}
+                                        <div class="col-md-6">
+                                            <h6 class="mb-3">Continuas</h6>
+                                            {% for periodo, datos in estadisticas_detalladas.continuas.items %}
+                                            <div class="progreso-item">
+                                                <div class="progreso-header">
+                                                    <strong>{{ periodo }}</strong>
+                                                    <span class="evaluacion-stats">
+                                                        {{ datos.alumnos_con_nota }}/{{ estadisticas_generales.total_alumnos }} con nota
+                                                        {% if datos.tiene_datos %}
+                                                            ({{ datos.promedio }} promedio)
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                                <div class="progreso-bar">
+                                                    {% if estadisticas_generales.total_alumnos > 0 %}
+                                                        {% widthratio datos.alumnos_con_nota estadisticas_generales.total_alumnos 100 as porcentaje %}
+                                                        <div class="progreso-fill {% if porcentaje < 50 %}progreso-fill-warning{% endif %}" style="width: {{ porcentaje }}%"></div>
+                                                    {% else %}
+                                                        <div class="progreso-fill" style="width: 0%"></div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="evaluacion-stats mt-1">
+                                                    {% if datos.tiene_datos %}
+                                                        <span class="text-success">
+                                                            <i class="bi bi-check-circle"></i> {{ datos.alumnos_con_nota }} con nota
+                                                        </span>
+                                                        <span class="text-muted mx-2">|</span>
+                                                        <span class="text-warning">
+                                                            <i class="bi bi-clock"></i> {{ datos.alumnos_sin_nota }} sin nota
+                                                        </span>
+                                                        {% if datos.alumnos_evaluados > datos.alumnos_con_nota %}
+                                                        <span class="text-muted mx-2">|</span>
+                                                        <span class="text-info">
+                                                            <i class="bi bi-dash-circle"></i> {{ datos.alumnos_evaluados|add:"-"|add:datos.alumnos_con_nota }} no evaluados
+                                                        </span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="text-danger">
+                                                            <i class="bi bi-exclamation-triangle"></i> Sin evaluaciones registradas
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Resumen General de Evaluación -->
+                                    <div class="row mt-4">
+                                        <div class="col-12">
+                                            <div class="card border-0 bg-light">
+                                                <div class="card-body">
+                                                    <div class="row text-center">
+                                                        <div class="col-md-3">
+                                                            <div class="estadistica-numero text-primary">{{ estadisticas_generales.total_alumnos }}</div>
+                                                            <small class="text-muted">Total Alumnos</small>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <div class="estadistica-numero text-success">{{ estadisticas_generales.total_con_nota }}</div>
+                                                            <small class="text-muted">Con Nota Final</small>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <div class="estadistica-numero text-warning">
+                                                                {% with pendientes=estadisticas_generales.total_alumnos|add:"0"|add:"-"|add:estadisticas_generales.total_con_nota|add:"0" %}
+                                                                    {{ pendientes }}
+                                                                {% endwith %}
+                                                            </div>
+                                                            <small class="text-muted">Sin Nota Final</small>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <div class="estadistica-numero text-info">
+                                                                {% if estadisticas_generales.total_alumnos > 0 %}
+                                                                    {% widthratio estadisticas_generales.total_con_nota estadisticas_generales.total_alumnos 100 as porcentaje %}
+                                                                    {{ porcentaje }}%
+                                                                {% else %}
+                                                                    0%
+                                                                {% endif %}
+                                                            </div>
+                                                            <small class="text-muted">Avance Total</small>
+                                                        </div>
+                                                    </div>
+                                                    {% if estadisticas_detalladas.sustitutorios %}
+                                                    <div class="row mt-3 text-center">
+                                                        <div class="col-12">
+                                                            <span class="badge bg-info">
+                                                                <i class="bi bi-arrow-repeat"></i>
+                                                                Sustitutorios: {{ estadisticas_detalladas.sustitutorios.alumnos_con_nota }}/{{ estadisticas_generales.total_alumnos }} aplicados
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Estadísticas Generales -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Estadísticas Generales - {{ grupo_seleccionado.curso.nombre }}</h5>
+                                    <form method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="grupo_id" value="{{ grupo_seleccionado.id }}">
+                                        <button type="submit" name="descargar_excel" class="btn btn-light btn-sm">
+                                            <i class="bi bi-download"></i> Descargar Excel
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="card-body">
+                                    {% if estadisticas_generales and estadisticas_generales.total_con_nota > 0 %}
+                                    <div class="row text-center">
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card card-estadistica border-primary">
+                                                <div class="card-body">
+                                                    <div class="estadistica-numero text-primary">{{ estadisticas_generales.total_alumnos }}</div>
+                                                    <small class="text-muted">Total Alumnos</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card card-estadistica border-success">
+                                                <div class="card-body">
+                                                    <div class="estadistica-numero text-success">{{ estadisticas_generales.aprobados }}</div>
+                                                    <small class="text-muted">Aprobados</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card card-estadistica border-danger">
+                                                <div class="card-body">
+                                                    <div class="estadistica-numero text-danger">{{ estadisticas_generales.desaprobados }}</div>
+                                                    <small class="text-muted">Desaprobados</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card card-estadistica border-info">
+                                                <div class="card-body">
+                                                    <div class="estadistica-numero text-info">{{ estadisticas_generales.tasa_aprobacion }}%</div>
+                                                    <small class="text-muted">Tasa Aprobación</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mt-4">
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">Rendimiento General</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <table class="table table-striped table-stats">
+                                                        <tr>
+                                                            <td>Nota Promedio</td>
+                                                            <td class="fw-bold">{{ estadisticas_generales.nota_promedio }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Nota Máxima</td>
+                                                            <td class="fw-bold text-success">
+                                                                {{ estadisticas_generales.nota_maxima }}
+                                                                {% if estadisticas_generales.alumno_maxima %}
+                                                                <br><small>{{ estadisticas_generales.alumno_maxima.alumno.nombre }}</small>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Nota Mínima</td>
+                                                            <td class="fw-bold text-danger">
+                                                                {{ estadisticas_generales.nota_minima }}
+                                                                {% if estadisticas_generales.alumno_minima %}
+                                                                <br><small>{{ estadisticas_generales.alumno_minima.alumno.nombre }}</small>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Alumnos Evaluados</td>
+                                                            <td class="fw-bold text-info">
+                                                                {{ estadisticas_generales.total_con_nota }}/{{ estadisticas_generales.total_alumnos }}
+                                                                ({% if estadisticas_generales.total_alumnos > 0 %}{% widthratio estadisticas_generales.total_con_nota estadisticas_generales.total_alumnos 100 as porcentaje %}{{ porcentaje }}%{% else %}0%{% endif %})
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">Distribución de Notas</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <canvas id="chartDistribucion" width="400" height="200"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <div class="alert alert-warning text-center">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                        No hay suficientes datos para mostrar estadísticas generales.
+                                        <br><small class="text-muted">Ingrese notas para ver las estadísticas del curso.</small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Estadísticas Detalladas -->
+                    {% if estadisticas_detalladas %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">Estadísticas por Tipo de Evaluación</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <!-- Parciales -->
+                                        {% if estadisticas_detalladas.parciales %}
+                                        <div class="col-md-4">
+                                            <h6>Parciales</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Parcial</th>
+                                                            <th>Promedio</th>
+                                                            <th>Máx</th>
+                                                            <th>Mín</th>
+                                                            <th>Con Nota</th>
+                                                            <th>Peso</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for key, stats in estadisticas_detalladas.parciales.items %}
+                                                        <tr>
+                                                            <td>{{ key }}</td>
+                                                            <td>
+                                                                {% if stats.tiene_datos %}
+                                                                    {{ stats.promedio }}
+                                                                {% else %}
+                                                                    <span class="sin-datos">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td class="text-success">
+                                                                {% if stats.tiene_datos %}
+                                                                    {{ stats.maxima }}
+                                                                {% else %}
+                                                                    <span class="sin-datos">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td class="text-danger">
+                                                                {% if stats.tiene_datos %}
+                                                                    {{ stats.minima }}
+                                                                {% else %}
+                                                                    <span class="sin-datos">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td>
+                                                                <span class="badge {% if stats.tiene_datos %}bg-success{% else %}bg-secondary{% endif %}">
+                                                                    {{ stats.alumnos_con_nota }}/{{ estadisticas_generales.total_alumnos }}
+                                                                </span>
+                                                            </td>
+                                                            <td>{{ stats.peso }}%</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Continuas -->
+                                        {% if estadisticas_detalladas.continuas %}
+                                        <div class="col-md-4">
+                                            <h6>Continuas</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Continua</th>
+                                                            <th>Promedio</th>
+                                                            <th>Máx</th>
+                                                            <th>Mín</th>
+                                                            <th>Con Nota</th>
+                                                            <th>Peso</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for key, stats in estadisticas_detalladas.continuas.items %}
+                                                        <tr>
+                                                            <td>{{ key }}</td>
+                                                            <td>
+                                                                {% if stats.tiene_datos %}
+                                                                    {{ stats.promedio }}
+                                                                {% else %}
+                                                                    <span class="sin-datos">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td class="text-success">
+                                                                {% if stats.tiene_datos %}
+                                                                    {{ stats.maxima }}
+                                                                {% else %}
+                                                                    <span class="sin-datos">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td class="text-danger">
+                                                                {% if stats.tiene_datos %}
+                                                                    {{ stats.minima }}
+                                                                {% else %}
+                                                                    <span class="sin-datos">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td>
+                                                                <span class="badge {% if stats.tiene_datos %}bg-success{% else %}bg-secondary{% endif %}">
+                                                                    {{ stats.alumnos_con_nota }}/{{ estadisticas_generales.total_alumnos }}
+                                                                </span>
+                                                            </td>
+                                                            <td>{{ stats.peso }}%</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Sustitutorios -->
+                                        {% if estadisticas_detalladas.sustitutorios %}
+                                        <div class="col-md-4">
+                                            <h6>Sustitutorios</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Estadística</th>
+                                                            <th>Valor</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <td>Promedio</td>
+                                                            <td>
+                                                                {% if estadisticas_detalladas.sustitutorios.tiene_datos %}
+                                                                    {{ estadisticas_detalladas.sustitutorios.promedio }}
+                                                                {% else %}
+                                                                    <span class="sin-datos">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Máxima</td>
+                                                            <td class="text-success">
+                                                                {% if estadisticas_detalladas.sustitutorios.tiene_datos %}
+                                                                    {{ estadisticas_detalladas.sustitutorios.maxima }}
+                                                                {% else %}
+                                                                    <span class="sin-datos">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Mínima</td>
+                                                            <td class="text-danger">
+                                                                {% if estadisticas_detalladas.sustitutorios.tiene_datos %}
+                                                                    {{ estadisticas_detalladas.sustitutorios.minima }}
+                                                                {% else %}
+                                                                    <span class="sin-datos">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Total Aplicados</td>
+                                                            <td>
+                                                                <span class="badge {% if estadisticas_detalladas.sustitutorios.tiene_datos %}bg-info{% else %}bg-secondary{% endif %}">
+                                                                    {{ estadisticas_detalladas.sustitutorios.alumnos_con_nota }}/{{ estadisticas_generales.total_alumnos }}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Gráficos de Avance -->
+                    {% if estadisticas_avance and estadisticas_avance.parciales.periodos or estadisticas_avance.continuas.periodos %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-secondary text-white">
+                                    <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Avance por Periodos</h5>
+                                </div>
+                                                                <div class="card-body">
+                                    <div class="row">
+                                        <!-- Gráfico de Parciales -->
+                                        {% if estadisticas_avance.parciales.periodos %}
+                                        <div class="col-md-6">
+                                            <h6>Evolución de Notas Parciales</h6>
+                                            <canvas id="chartAvanceParciales" width="400" height="250"></canvas>
+                                            <div class="text-center mt-2">
+                                                <small class="text-muted">
+                                                    Alumnos evaluados por período: 
+                                                    {% for evaluados in estadisticas_avance.parciales.alumnos_evaluados %}
+                                                        {{ evaluados }}{% if not forloop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <!-- Gráfico de Continuas -->
+                                        {% if estadisticas_avance.continuas.periodos %}
+                                        <div class="col-md-6">
+                                            <h6>Evolución de Notas Continuas</h6>
+                                            <canvas id="chartAvanceContinuas" width="400" height="250"></canvas>
+                                            <div class="text-center mt-2">
+                                                <small class="text-muted">
+                                                    Alumnos evaluados por período: 
+                                                    {% for evaluados in estadisticas_avance.continuas.alumnos_evaluados %}
+                                                        {{ evaluados }}{% if not forloop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Subir Exámenes -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0"><i class="bi bi-upload"></i> Subir Exámenes PDF</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="post" enctype="multipart/form-data">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="grupo_id" value="{{ grupo_seleccionado.id }}">
+                                        
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Tipo de Examen:</label>
+                                                <select name="tipo_examen" class="form-select" required>
+                                                    <option value="A">Alta (Mejores notas)</option>
+                                                    <option value="P">Promedio</option>
+                                                    <option value="B">Baja (Peores notas)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Archivos PDF:</label>
+                                                <input type="file" class="form-control" name="archivos_examen" 
+                                                       accept=".pdf" multiple required>
+                                                <div class="form-text">
+                                                    <strong>Formato requerido:</strong> Cualquier archivo que contenga el DNI (ej: 12345678_examen.pdf, examen_12345678.pdf, 12345678.pdf)<br>
+                                                    <strong>Se renombrará automáticamente a:</strong> DNI_CODIGOCURSO_TIPO.pdf<br>
+                                                    <strong>Ejemplo:</strong> 12345678_1701209_alta.pdf<br>
+                                                    <strong>Nota:</strong> El sistema buscará automáticamente el alumno en la base de datos usando el DNI
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2 d-flex align-items-end">
+                                                <button type="submit" name="subir_examenes" class="btn btn-success w-100">
+                                                    <i class="bi bi-upload"></i> Subir
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Mensaje cuando no hay grupo seleccionado -->
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-folder-x display-1 text-muted"></i>
+                            <h3 class="text-muted mt-3">Seleccione un grupo de teoría</h3>
+                            <p class="text-muted">Elija un grupo de la lista desplegable para ver las estadísticas</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% if estadisticas_generales and estadisticas_generales.total_con_nota > 0 %}
+    <script>
+        // Gráfico de distribución
+        const ctxDist = document.getElementById('chartDistribucion').getContext('2d');
+        new Chart(ctxDist, {
+            type: 'pie',
+            data: {
+                labels: ['Aprobados', 'Desaprobados', 'Sin Nota Final'],
+                datasets: [{
+                    data: [
+                        {{ estadisticas_generales.aprobados }},
+                        {{ estadisticas_generales.desaprobados }},
+                        {{ estadisticas_generales.total_alumnos|add:"0"|add:"-"|add:estadisticas_generales.total_con_nota|add:"0" }}
+                    ],
+                    backgroundColor: ['#28a745', '#dc3545', '#6c757d']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label;
+                                const value = context.raw;
+                                const total = {{ estadisticas_generales.total_alumnos }};
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+    {% endif %}
+
+    {% if estadisticas_avance %}
+    <script>
+        // Gráfico de avance de parciales
+        {% if estadisticas_avance.parciales.periodos %}
+        const ctxParciales = document.getElementById('chartAvanceParciales').getContext('2d');
+        new Chart(ctxParciales, {
+            type: 'bar',
+            data: {
+                labels: {{ estadisticas_avance.parciales.periodos|safe }},
+                datasets: [{
+                    label: 'Promedio Parciales',
+                    data: {{ estadisticas_avance.parciales.promedios|safe }},
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 20,
+                        title: {
+                            display: true,
+                            text: 'Nota Promedio'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Periodos'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Evolución de Parciales'
+                    }
+                }
+            }
+        });
+        {% endif %}
+
+        // Gráfico de avance de continuas
+        {% if estadisticas_avance.continuas.periodos %}
+        const ctxContinuas = document.getElementById('chartAvanceContinuas').getContext('2d');
+        new Chart(ctxContinuas, {
+            type: 'bar',
+            data: {
+                labels: {{ estadisticas_avance.continuas.periodos|safe }},
+                datasets: [{
+                    label: 'Promedio Continuas',
+                    data: {{ estadisticas_avance.continuas.promedios|safe }},
+                    backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 20,
+                        title: {
+                            display: true,
+                            text: 'Nota Promedio'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Periodos'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Evolución de Continuas'
+                    }
+                }
+            }
+        });
+        {% endif %}
+    </script>
+    {% endif %}
+</body>
+</html>

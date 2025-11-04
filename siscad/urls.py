@@ -89,5 +89,14 @@ urlpatterns = [
         views.ingresar_notas,
         name="ingresar_notas",
     ),
-    path('profesor/descargar-plantilla/<int:grupo_id>/', views.descargar_plantilla_excel, name='descargar_plantilla_excel'),
+    path(
+        "profesor/descargar-plantilla/<int:grupo_id>/",
+        views.descargar_plantilla_excel,
+        name="descargar_plantilla_excel",
+    ),
+    path(
+        "profesor/revisar-estadisticas/",
+        views.revisar_estadisticas,
+        name="revisar_estadisticas",
+    ),
 ]

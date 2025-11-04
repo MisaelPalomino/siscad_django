@@ -581,7 +581,7 @@ def insertar_notas():
                         peso=peso,
                         alumno=alumno,
                         curso=curso,
-                        valor=None,
+                        valor=-1,  # Cambiado de None a -1
                     )
                 )
 
@@ -600,7 +600,7 @@ def insertar_notas():
                         peso=peso,
                         alumno=alumno,
                         curso=curso,
-                        valor=None,
+                        valor=-1,  # Cambiado de None a -1
                     )
                 )
 
@@ -618,14 +618,14 @@ def insertar_notas():
                     peso=1,  # Peso por defecto, se ajustará al calcular
                     alumno=alumno,
                     curso=curso,
-                    valor=None,
+                    valor=-1,  # Cambiado de None a -1
                 )
             )
 
     with transaction.atomic():
         Nota.objects.bulk_create(notas_a_crear, batch_size=500)
 
-    print(f"✅ {len(notas_a_crear)} notas generadas exitosamente.")
+    print(f" {len(notas_a_crear)} notas generadas exitosamente.")
 
 
 def insertar_grupos_laboratorio():

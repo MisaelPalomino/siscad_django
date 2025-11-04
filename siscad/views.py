@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q, Count
 from .forms import UploadExcelForm
+from django.db.models import Avg, Max, Min, Count, Q
 import io
 
 
@@ -28,6 +29,7 @@ from .models import (
     AsistenciaProfesor,
     Reserva,
     Aula,
+    Examen,
 )
 import pandas as pd
 
@@ -2399,11 +2401,11 @@ def procesar_notas_manual(request, grupo_teoria, alumnos_grupo):
                                     nota.save()
                             except ValueError:
                                 continue
-                        # Si el campo está vacío, establecer como None
+                        # Si el campo está vacío, establecer como -1
                         elif valor_continua == "":
                             Nota.objects.filter(
                                 alumno=alumno, curso=curso, tipo="C", periodo=periodo
-                            ).update(valor=None)
+                            ).update(valor=-1)
 
             # Procesar 3 parciales (solo si el curso los tiene configurados)
             if any(
@@ -2439,14 +2441,14 @@ def procesar_notas_manual(request, grupo_teoria, alumnos_grupo):
                                     nota.save()
                             except ValueError:
                                 continue
-                        # Si el campo está vacío, establecer como None
+                        # Si el campo está vacío, establecer como -1
                         elif valor_parcial == "":
                             Nota.objects.filter(
                                 alumno=alumno,
                                 curso=curso,
                                 tipo="P",
                                 periodo=periodo_parcial,
-                            ).update(valor=None)
+                            ).update(valor=-1)
 
             # Procesar sustitutorio (solo si el curso tiene al menos 2 parciales)
             if curso.peso_parcial_1 > 0 and curso.peso_parcial_2 > 0:
@@ -2468,23 +2470,23 @@ def procesar_notas_manual(request, grupo_teoria, alumnos_grupo):
                             nota.save()
                     except ValueError:
                         continue
-                # Si el campo está vacío, establecer como None
+                # Si el campo está vacío, establecer como -1
                 elif valor_sustitutorio == "":
                     Nota.objects.filter(
                         alumno=alumno, curso=curso, tipo="S", periodo=1
-                    ).update(valor=None)
+                    ).update(valor=-1)
 
 
 def procesar_excel_notas(archivo, grupo_teoria):
     """
-    Procesa un archivo Excel para cargar notas masivamente - VERSIÓN OPTIMIZADA
+    Procesa un archivo Excel para cargar notas masivamente - VERSIÓN CON -1
     """
     try:
         # Leer el archivo más rápido sin procesamiento extra
         if archivo.name.endswith(".xlsx"):
-            df = pd.read_excel(archivo, dtype={"dni_alumno": str, "valor": float})
+            df = pd.read_excel(archivo, dtype={"dni_alumno": str, "valor": object})
         elif archivo.name.endswith(".csv"):
-            df = pd.read_csv(archivo, dtype={"dni_alumno": str, "valor": float})
+            df = pd.read_csv(archivo, dtype={"dni_alumno": str, "valor": object})
         else:
             return {"success": False, "message": "Formato de archivo no soportado"}
 
@@ -2493,26 +2495,23 @@ def procesar_excel_notas(archivo, grupo_teoria):
         if not all(col in df.columns for col in columnas_requeridas):
             return {"success": False, "message": "Faltan columnas requeridas"}
 
-        # Limpiar y preparar datos de una vez
+        # Limpiar y preparar datos
         df = df.copy()
         df["dni_alumno"] = df["dni_alumno"].astype(str).str.strip()
         df["tipo_nota"] = df["tipo_nota"].astype(str).str.strip().str.upper()
         df["periodo"] = (
             pd.to_numeric(df["periodo"], errors="coerce").fillna(0).astype(int)
         )
-        df["valor"] = pd.to_numeric(df["valor"], errors="coerce").fillna(0)
 
-        # Filtrar valores fuera de rango
-        df = df[(df["valor"] >= 0) & (df["valor"] <= 20)]
+        # Manejar valores vacíos: convertir a -1
+        df["valor"] = pd.to_numeric(df["valor"], errors="coerce")
+        df["valor"] = df["valor"].fillna(-1)  # Valores vacíos se convierten a -1
 
-        # Filtrar tipos de nota válidos
-        df = df[df["tipo_nota"].isin(["C", "P", "S"])]
+        # Filtrar valores válidos (>= 0 y <= 20) y -1 para "no asignado"
+        df = df[((df["valor"] >= 0) & (df["valor"] <= 20)) | (df["valor"] == -1)]
 
-        # Filtrar periodos válidos
-        df = df[df["periodo"].isin([1, 2, 3])]
-
-        if df.empty:
-            return {"success": False, "message": "No hay datos válidos para procesar"}
+        # Filtrar tipos de nota válidos y periodos válidos
+        df = df[df["tipo_nota"].isin(["C", "P", "S"]) & df["periodo"].isin([1, 2, 3])]
 
         curso = grupo_teoria.curso
 
@@ -2535,21 +2534,18 @@ def procesar_excel_notas(archivo, grupo_teoria):
         if df.empty:
             return {
                 "success": False,
-                "message": "No hay alumnos matriculados en los datos",
+                "message": "No hay datos válidos para procesar",
             }
 
         # Preparar datos para bulk_create y bulk_update
-        notas_a_crear = []
-        notas_a_actualizar = []
+        notas_a_procesar = []
 
         # Agrupar por alumno y tipo para procesamiento más eficiente
         for (dni_alumno, tipo_nota, periodo), group_df in df.groupby(
             ["dni_alumno", "tipo_nota", "periodo"]
         ):
             if not group_df.empty:
-                valor = group_df["valor"].iloc[
-                    0
-                ]  # Tomar el primer valor si hay duplicados
+                valor = group_df["valor"].iloc[0]  # Tomar el primer valor
 
                 # Validar configuración del curso
                 if tipo_nota == "C":
@@ -2569,25 +2565,24 @@ def procesar_excel_notas(archivo, grupo_teoria):
                 if not alumno:
                     continue
 
-                notas_a_crear.append(
-                    Nota(
-                        alumno=alumno,
-                        curso=curso,
-                        tipo=tipo_nota,
-                        periodo=periodo,
-                        valor=valor,
-                        peso=peso,
-                    )
+                notas_a_procesar.append(
+                    {
+                        "alumno": alumno,
+                        "tipo": tipo_nota,
+                        "periodo": periodo,
+                        "valor": valor,
+                        "peso": peso,
+                    }
                 )
 
-        if not notas_a_crear:
-            return {"success": False, "message": "No hay notas válidas para crear"}
+        if not notas_a_procesar:
+            return {"success": False, "message": "No hay notas válidas para procesar"}
 
         # Procesamiento masivo con bulk operations
         with transaction.atomic():
             # Obtener notas existentes para evitar duplicados
             notas_existentes = Nota.objects.filter(
-                alumno__in=[n.alumno for n in notas_a_crear], curso=curso
+                alumno__in=[n["alumno"] for n in notas_a_procesar], curso=curso
             ).select_related("alumno")
 
             # Crear diccionario de notas existentes para búsqueda rápida
@@ -2600,15 +2595,24 @@ def procesar_excel_notas(archivo, grupo_teoria):
             notas_para_crear = []
             notas_para_actualizar = []
 
-            for nueva_nota in notas_a_crear:
-                key = (nueva_nota.alumno.dni, nueva_nota.tipo, nueva_nota.periodo)
+            for nota_data in notas_a_procesar:
+                key = (nota_data["alumno"].dni, nota_data["tipo"], nota_data["periodo"])
                 if key in existentes_dict:
                     nota_existente = existentes_dict[key]
-                    nota_existente.valor = nueva_nota.valor
-                    nota_existente.peso = nueva_nota.peso
+                    nota_existente.valor = nota_data["valor"]
+                    nota_existente.peso = nota_data["peso"]
                     notas_para_actualizar.append(nota_existente)
                 else:
-                    notas_para_crear.append(nueva_nota)
+                    notas_para_crear.append(
+                        Nota(
+                            alumno=nota_data["alumno"],
+                            curso=curso,
+                            tipo=nota_data["tipo"],
+                            periodo=nota_data["periodo"],
+                            valor=nota_data["valor"],
+                            peso=nota_data["peso"],
+                        )
+                    )
 
             # Ejecutar operaciones masivas
             if notas_para_crear:
@@ -2644,18 +2648,19 @@ def preparar_datos_notas(alumnos_grupo, grupo_teoria):
         # Obtener todas las notas del alumno en este curso
         notas_alumno = Nota.objects.filter(alumno=alumno, curso=curso)
 
-        # Organizar notas
+        # Organizar notas (-1 se muestra como vacío)
         notas_continua = {1: None, 2: None, 3: None}
         notas_parcial = {1: None, 2: None, 3: None}
         nota_sustitutorio = None
 
         for nota in notas_alumno:
             if nota.tipo == "C" and nota.periodo in [1, 2, 3]:
-                notas_continua[nota.periodo] = nota.valor
+                # Mostrar solo valores >= 0, -1 se muestra como None/vacío
+                notas_continua[nota.periodo] = nota.valor if nota.valor >= 0 else None
             elif nota.tipo == "P" and nota.periodo in [1, 2, 3]:
-                notas_parcial[nota.periodo] = nota.valor
+                notas_parcial[nota.periodo] = nota.valor if nota.valor >= 0 else None
             elif nota.tipo == "S":
-                nota_sustitutorio = nota.valor
+                nota_sustitutorio = nota.valor if nota.valor >= 0 else None
 
         # Determinar qué tipos de notas mostrar según configuración del curso
         curso_tiene_continua = any(
@@ -2704,7 +2709,7 @@ def preparar_datos_notas(alumnos_grupo, grupo_teoria):
 
 def descargar_plantilla_excel(request, grupo_id):
     """
-    Vista para descargar una plantilla Excel para cargar notas
+    Vista para descargar una plantilla Excel para cargar notas CON DATOS EXISTENTES
     """
     grupo_teoria = get_object_or_404(GrupoTeoria, id=grupo_id)
     curso = grupo_teoria.curso
@@ -2722,8 +2727,38 @@ def descargar_plantilla_excel(request, grupo_id):
         curso=grupo_teoria.curso, turno=grupo_teoria.turno
     ).select_related("alumno")
 
+    # Pre-cargar todas las notas de estos alumnos en este curso para mejor performance
+    alumnos_ids = [matricula.alumno.id for matricula in alumnos_grupo]
+    notas_existentes = Nota.objects.filter(
+        alumno_id__in=alumnos_ids, curso=curso
+    ).select_related("alumno")
+
+    # Organizar notas por alumno para acceso rápido
+    notas_por_alumno = {}
+    for nota in notas_existentes:
+        if nota.alumno_id not in notas_por_alumno:
+            notas_por_alumno[nota.alumno_id] = []
+        notas_por_alumno[nota.alumno_id].append(nota)
+
     for matricula in alumnos_grupo:
         alumno = matricula.alumno
+        notas_alumno = notas_por_alumno.get(alumno.id, [])
+
+        # Organizar notas del alumno por tipo y periodo
+        notas_organizadas = {
+            "C": {1: None, 2: None, 3: None},
+            "P": {1: None, 2: None, 3: None},
+            "S": {1: None},
+        }
+
+        for nota in notas_alumno:
+            if nota.tipo in ["C", "P"] and nota.periodo in [1, 2, 3]:
+                # Solo mostrar valores >= 0, -1 se muestra como vacío
+                notas_organizadas[nota.tipo][nota.periodo] = (
+                    nota.valor if nota.valor >= 0 else None
+                )
+            elif nota.tipo == "S" and nota.periodo == 1:
+                notas_organizadas["S"][1] = nota.valor if nota.valor >= 0 else None
 
         # Agregar filas para notas continuas (solo si el curso las tiene)
         if any(
@@ -2739,7 +2774,11 @@ def descargar_plantilla_excel(request, grupo_id):
                     data["dni_alumno"].append(alumno.dni)
                     data["tipo_nota"].append("C")
                     data["periodo"].append(periodo)
-                    data["valor"].append("")
+                    # Usar valor existente si existe y es >= 0, sino vacío
+                    valor_existente = notas_organizadas["C"][periodo]
+                    data["valor"].append(
+                        valor_existente if valor_existente is not None else ""
+                    )
 
         # Agregar filas para notas parciales (solo si el curso las tiene)
         if any(
@@ -2755,29 +2794,186 @@ def descargar_plantilla_excel(request, grupo_id):
                     data["dni_alumno"].append(alumno.dni)
                     data["tipo_nota"].append("P")
                     data["periodo"].append(periodo)
-                    data["valor"].append("")
+                    # Usar valor existente si existe y es >= 0, sino vacío
+                    valor_existente = notas_organizadas["P"][periodo]
+                    data["valor"].append(
+                        valor_existente if valor_existente is not None else ""
+                    )
 
         # Agregar fila para sustitutorio (solo si el curso lo permite)
         if curso.peso_parcial_1 > 0 and curso.peso_parcial_2 > 0:
             data["dni_alumno"].append(alumno.dni)
             data["tipo_nota"].append("S")
             data["periodo"].append(1)
-            data["valor"].append("")
+            # Usar valor existente si existe y es >= 0, sino vacío
+            valor_existente = notas_organizadas["S"][1]
+            data["valor"].append(valor_existente if valor_existente is not None else "")
 
     df = pd.DataFrame(data)
 
+    # Crear un libro de Excel con formato mejorado
     output = io.BytesIO()
+
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        # Hoja principal con datos
         df.to_excel(writer, sheet_name="Plantilla_Notas", index=False)
+
+        # Obtener la hoja para aplicar formato
+        workbook = writer.book
+        worksheet = writer.sheets["Plantilla_Notas"]
+
+        # Aplicar formato a las columnas
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+        # Estilo para encabezados
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        header_fill = PatternFill(
+            start_color="366092", end_color="366092", fill_type="solid"
+        )
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
+
+        # Aplicar estilo a los encabezados
+        for cell in worksheet[1]:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+            cell.border = border
+
+        # Aplicar bordes a todas las celdas con datos
+        for row in worksheet.iter_rows(
+            min_row=2, max_row=worksheet.max_row, min_col=1, max_col=4
+        ):
+            for cell in row:
+                cell.border = border
+
+        # Ajustar ancho de columnas
+        column_widths = {
+            "A": 15,  # dni_alumno
+            "B": 12,  # tipo_nota
+            "C": 10,  # periodo
+            "D": 12,  # valor
+        }
+
+        for col, width in column_widths.items():
+            worksheet.column_dimensions[col].width = width
+
+        # Aplicar formato de texto a las columnas
+        for row in range(2, worksheet.max_row + 1):
+            # DNI como texto
+            worksheet[f"A{row}"].number_format = "@"
+            # Valor con formato numérico (2 decimales)
+            worksheet[f"D{row}"].number_format = "0.00"
+
+        # Hoja de instrucciones
+        instrucciones_data = {
+            "Instrucciones": [
+                "1. NO modifique la estructura de las columnas",
+                "2. Los tipos de nota son: C=Continua, P=Parcial, S=Sustitutorio",
+                "3. Los periodos válidos son: 1, 2, 3",
+                "4. Las notas deben estar entre 0 y 20",
+                "5. Deje vacío si no desea modificar una nota existente",
+                "6. Para eliminar una nota, déjela vacía en el Excel",
+                "7. Mantenga el formato del DNI sin espacios",
+                "8. Los valores vacíos se interpretarán como 'no evaluado'",
+                "9. Solo se procesarán las notas que coincidan con la configuración del curso",
+                "10. El sustitutorio solo aplica si el curso tiene Parcial 1 y Parcial 2 configurados",
+            ]
+        }
+        df_instrucciones = pd.DataFrame(instrucciones_data)
+        df_instrucciones.to_excel(writer, sheet_name="Instrucciones", index=False)
+
+        # Formato hoja de instrucciones
+        worksheet_inst = writer.sheets["Instrucciones"]
+
+        # Aplicar formato a la hoja de instrucciones
+        for cell in worksheet_inst[1]:
+            cell.font = Font(bold=True, color="FFFFFF", size=12)
+            cell.fill = PatternFill(
+                start_color="28a745", end_color="28a745", fill_type="solid"
+            )
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = border
+
+        # Ajustar ancho de columna de instrucciones
+        worksheet_inst.column_dimensions["A"].width = 80
+
+        # Aplicar bordes y formato a las instrucciones
+        for row in range(2, worksheet_inst.max_row + 1):
+            worksheet_inst[f"A{row}"].border = border
+            worksheet_inst[f"A{row}"].alignment = Alignment(
+                wrap_text=True, vertical="center"
+            )
+
+        # Hoja de configuración del curso
+        config_data = {
+            "Configuración del Curso": [
+                f"Curso: {curso.nombre}",
+                f"Código: {curso.codigo}",
+                f"Grupo: {grupo_teoria.get_turno_display()}",
+                "",
+                "Pesos de Evaluación:",
+                f"Continua P1: {curso.peso_continua_1}%",
+                f"Continua P2: {curso.peso_continua_2}%",
+                f"Continua P3: {curso.peso_continua_3}%",
+                f"Parcial 1: {curso.peso_parcial_1}%",
+                f"Parcial 2: {curso.peso_parcial_2}%",
+                f"Parcial 3: {curso.peso_parcial_3}%",
+                "",
+                "Sustitutorio: "
+                + (
+                    "HABILITADO (reemplaza la nota más baja entre P1 y P2)"
+                    if curso.peso_parcial_1 > 0 and curso.peso_parcial_2 > 0
+                    else "NO HABILITADO"
+                ),
+                "",
+                f"Total alumnos en el grupo: {len(alumnos_grupo)}",
+                f"Fecha de generación: {timezone.now().strftime('%Y-%m-%d %H:%M')}",
+            ]
+        }
+        df_config = pd.DataFrame(config_data)
+        df_config.to_excel(writer, sheet_name="Configuración", index=False)
+
+        # Formato hoja de configuración
+        worksheet_config = writer.sheets["Configuración"]
+        worksheet_config.column_dimensions["A"].width = 60
+
+        # Aplicar formato a la hoja de configuración
+        for cell in worksheet_config[1]:
+            cell.font = Font(bold=True, color="FFFFFF", size=12)
+            cell.fill = PatternFill(
+                start_color="6f42c1", end_color="6f42c1", fill_type="solid"
+            )
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = border
+
+        # Aplicar bordes y formato a la configuración
+        for row in range(2, worksheet_config.max_row + 1):
+            worksheet_config[f"A{row}"].border = border
+            worksheet_config[f"A{row}"].alignment = Alignment(
+                wrap_text=True, vertical="center"
+            )
+
+        # Resaltar filas importantes en configuración
+        important_rows = [5, 12]  # Filas de "Pesos de Evaluación" y "Sustitutorio"
+        for row in important_rows:
+            if row <= worksheet_config.max_row:
+                worksheet_config[f"A{row}"].font = Font(bold=True, color="2c3e50")
 
     output.seek(0)
 
+    # Crear respuesta HTTP
     response = HttpResponse(
         output.getvalue(),
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
     response["Content-Disposition"] = (
-        f'attachment; filename="plantilla_notas_{grupo_teoria.curso.nombre}.xlsx"'
+        f'attachment; filename="plantilla_notas_{curso.codigo}_{grupo_teoria.get_turno_display()}_{timezone.now().strftime("%Y%m%d")}.xlsx"'
     )
 
     return response
@@ -2787,21 +2983,32 @@ def calcular_nota_final(alumno, curso):
     """
     Calcula la nota final considerando sustitutorio y pesos dinámicos
     El sustitutorio reemplaza la nota más baja de los parciales 1 y 2
+    IGNORA las notas que son -1 (no asignadas)
     """
     # Obtener todas las notas
     notas = Nota.objects.filter(alumno=alumno, curso=curso)
 
-    # Separar por tipo
-    continuas = {n.periodo: n for n in notas if n.tipo == "C" and n.valor is not None}
-    parciales = {n.periodo: n for n in notas if n.tipo == "P" and n.valor is not None}
+    # Separar por tipo, excluyendo -1
+    continuas = {
+        n.periodo: n
+        for n in notas
+        if n.tipo == "C" and n.valor is not None and n.valor >= 0
+    }
+    parciales = {
+        n.periodo: n
+        for n in notas
+        if n.tipo == "P" and n.valor is not None and n.valor >= 0
+    }
     sustitutorio = next(
-        (n for n in notas if n.tipo == "S" and n.valor is not None), None
+        (n for n in notas if n.tipo == "S" and n.valor is not None and n.valor >= 0),
+        None,
     )
 
-    # Aplicar sustitutorio si existe y hay al menos 2 parciales
+    # Aplicar sustitutorio si existe y hay al menos 2 parciales con nota válida
     if (
         sustitutorio
         and sustitutorio.valor is not None
+        and sustitutorio.valor >= 0
         and 1 in parciales
         and 2 in parciales
     ):
@@ -2819,24 +3026,25 @@ def calcular_nota_final(alumno, curso):
     total_puntos = 0
     total_pesos = 0
 
-    # Sumar continuas (solo si tienen peso configurado)
+    # Sumar continuas (solo si tienen peso configurado y valor >= 0)
     for periodo in [1, 2, 3]:
         if periodo in continuas:
             peso = getattr(curso, f"peso_continua_{periodo}", 0)
-            if peso > 0:
+            if peso > 0 and continuas[periodo].valor >= 0:
                 total_puntos += continuas[periodo].valor * peso
                 total_pesos += peso
 
-    # Sumar parciales (solo si tienen peso configurado)
+    # Sumar parciales (solo si tienen peso configurado y valor >= 0)
     for periodo in [1, 2, 3]:
         if periodo in parciales:
             peso = getattr(curso, f"peso_parcial_{periodo}", 0)
-            if peso > 0:
+            if peso > 0 and parciales[periodo].valor >= 0:
                 total_puntos += parciales[periodo].valor * peso
                 total_pesos += peso
 
+    # Solo calcular si hay al menos una nota válida
     if total_pesos == 0:
-        return None
+        return -1  # Retorna -1 si no hay notas válidas
 
     nota_final = total_puntos / total_pesos
 
@@ -2844,6 +3052,7 @@ def calcular_nota_final(alumno, curso):
     if (
         sustitutorio
         and sustitutorio.valor is not None
+        and sustitutorio.valor >= 0
         and 1 in parciales
         and 2 in parciales
     ):
@@ -2853,6 +3062,636 @@ def calcular_nota_final(alumno, curso):
             parciales[2].valor = nota_original_p2
 
     return round(nota_final, 2)
+
+
+def revisar_estadisticas(request):
+    if "email" not in request.session:
+        return redirect("login")
+
+    profesor = get_object_or_404(Profesor, email=request.session["email"])
+
+    grupos_teoria = GrupoTeoria.objects.filter(profesor=profesor)
+
+    grupo_seleccionado = None
+    estadisticas_generales = None
+    estadisticas_detalladas = None
+    estadisticas_avance = None
+    alumnos_grupo = []
+
+    if request.method == "POST":
+        grupo_id = request.POST.get("grupo_id")
+
+        if grupo_id:
+            grupo_seleccionado = get_object_or_404(
+                GrupoTeoria, id=grupo_id, profesor=profesor
+            )
+
+            # Obtener alumnos del grupo
+            alumnos_grupo = MatriculaCurso.objects.filter(
+                curso=grupo_seleccionado.curso, turno=grupo_seleccionado.turno
+            ).select_related("alumno")
+
+            # Procesar subida de exámenes
+            if "subir_examenes" in request.POST and request.FILES.getlist(
+                "archivos_examen"
+            ):
+                procesar_examenes(request, grupo_seleccionado)
+                messages.success(request, "Exámenes subidos correctamente")
+                return redirect("revisar_estadisticas")
+
+            # Descargar Excel
+            elif "descargar_excel" in request.POST:
+                return descargar_estadisticas_excel(
+                    request, grupo_seleccionado, alumnos_grupo
+                )
+
+            # Generar estadísticas
+            else:
+                estadisticas_generales = calcular_estadisticas_generales(
+                    grupo_seleccionado, alumnos_grupo
+                )
+                estadisticas_detalladas = calcular_estadisticas_detalladas(
+                    grupo_seleccionado, alumnos_grupo
+                )
+                estadisticas_avance = calcular_estadisticas_avance(
+                    grupo_seleccionado, alumnos_grupo
+                )
+
+    context = {
+        "grupos_teoria": grupos_teoria,
+        "grupo_seleccionado": grupo_seleccionado,
+        "estadisticas_generales": estadisticas_generales,
+        "estadisticas_detalladas": estadisticas_detalladas,
+        "estadisticas_avance": estadisticas_avance,
+        "alumnos_grupo": alumnos_grupo,
+    }
+
+    return render(request, "siscad/profesor/revisar_estadisticas.html", context)
+
+
+def calcular_estadisticas_generales(grupo_teoria, alumnos_grupo):
+    """
+    Calcula estadísticas generales del grupo - VERSIÓN CON -1
+    """
+    curso = grupo_teoria.curso
+    notas_finales = []
+
+    for matricula in alumnos_grupo:
+        alumno = matricula.alumno
+        nota_final = calcular_nota_final(alumno, curso)
+        # Solo considerar notas válidas (>= 0)
+        if nota_final is not None and nota_final >= 0:
+            notas_finales.append(nota_final)
+
+    if not notas_finales:
+        return {
+            "total_alumnos": len(alumnos_grupo),
+            "total_con_nota": 0,
+            "aprobados": 0,
+            "desaprobados": 0,
+            "tasa_aprobacion": 0,
+            "nota_promedio": 0,
+            "nota_maxima": 0,
+            "nota_minima": 0,
+            "alumno_maxima": None,
+            "alumno_minima": None,
+        }
+
+    # Calcular estadísticas
+    aprobados = sum(1 for nota in notas_finales if nota >= 10.5)
+    desaprobados = len(notas_finales) - aprobados
+
+    return {
+        "total_alumnos": len(alumnos_grupo),
+        "total_con_nota": len(notas_finales),
+        "aprobados": aprobados,
+        "desaprobados": desaprobados,
+        "tasa_aprobacion": round((aprobados / len(notas_finales) * 100), 2),
+        "nota_promedio": round(sum(notas_finales) / len(notas_finales), 2),
+        "nota_maxima": max(notas_finales),
+        "nota_minima": min(notas_finales),
+        "alumno_maxima": obtener_alumno_nota_maxima(grupo_teoria, alumnos_grupo),
+        "alumno_minima": obtener_alumno_nota_minima(grupo_teoria, alumnos_grupo),
+    }
+
+
+def calcular_estadisticas_detalladas(grupo_teoria, alumnos_grupo):
+    """
+    Calcula estadísticas detalladas por tipo de evaluación - VERSIÓN CON -1
+    """
+    curso = grupo_teoria.curso
+    estadisticas = {"parciales": {}, "continuas": {}, "sustitutorios": {}}
+
+    # Estadísticas de parciales
+    for periodo in [1, 2, 3]:
+        peso_parcial = getattr(curso, f"peso_parcial_{periodo}", 0)
+        if peso_parcial > 0:
+            notas_parcial = []
+            alumnos_con_nota = 0
+            alumnos_evaluados = 0
+
+            for matricula in alumnos_grupo:
+                nota = Nota.objects.filter(
+                    alumno=matricula.alumno, curso=curso, tipo="P", periodo=periodo
+                ).first()
+                # Solo considerar notas válidas (>= 0)
+                if nota and nota.valor is not None and nota.valor >= 0:
+                    notas_parcial.append(nota.valor)
+                    alumnos_con_nota += 1
+                # Contar alumnos que tienen registro (aunque sea -1)
+                if nota:
+                    alumnos_evaluados += 1
+
+            if notas_parcial:
+                estadisticas["parciales"][f"P{periodo}"] = {
+                    "promedio": round(sum(notas_parcial) / len(notas_parcial), 2),
+                    "maxima": max(notas_parcial),
+                    "minima": min(notas_parcial),
+                    "total": len(notas_parcial),
+                    "alumnos_con_nota": alumnos_con_nota,
+                    "alumnos_evaluados": alumnos_evaluados,
+                    "alumnos_sin_nota": len(alumnos_grupo) - alumnos_con_nota,
+                    "peso": peso_parcial,
+                    "tiene_datos": len(notas_parcial) > 0,
+                }
+            else:
+                # Incluir período incluso sin notas válidas
+                estadisticas["parciales"][f"P{periodo}"] = {
+                    "promedio": 0,
+                    "maxima": 0,
+                    "minima": 0,
+                    "total": 0,
+                    "alumnos_con_nota": 0,
+                    "alumnos_evaluados": alumnos_evaluados,
+                    "alumnos_sin_nota": len(alumnos_grupo),
+                    "peso": peso_parcial,
+                    "tiene_datos": False,
+                }
+
+    # Estadísticas de continuas
+    for periodo in [1, 2, 3]:
+        peso_continua = getattr(curso, f"peso_continua_{periodo}", 0)
+        if peso_continua > 0:
+            notas_continua = []
+            alumnos_con_nota = 0
+            alumnos_evaluados = 0
+
+            for matricula in alumnos_grupo:
+                nota = Nota.objects.filter(
+                    alumno=matricula.alumno, curso=curso, tipo="C", periodo=periodo
+                ).first()
+                # Solo considerar notas válidas (>= 0)
+                if nota and nota.valor is not None and nota.valor >= 0:
+                    notas_continua.append(nota.valor)
+                    alumnos_con_nota += 1
+                # Contar alumnos que tienen registro (aunque sea -1)
+                if nota:
+                    alumnos_evaluados += 1
+
+            if notas_continua:
+                estadisticas["continuas"][f"C{periodo}"] = {
+                    "promedio": round(sum(notas_continua) / len(notas_continua), 2),
+                    "maxima": max(notas_continua),
+                    "minima": min(notas_continua),
+                    "total": len(notas_continua),
+                    "alumnos_con_nota": alumnos_con_nota,
+                    "alumnos_evaluados": alumnos_evaluados,
+                    "alumnos_sin_nota": len(alumnos_grupo) - alumnos_con_nota,
+                    "peso": peso_continua,
+                    "tiene_datos": len(notas_continua) > 0,
+                }
+            else:
+                # Incluir período incluso sin notas válidas
+                estadisticas["continuas"][f"C{periodo}"] = {
+                    "promedio": 0,
+                    "maxima": 0,
+                    "minima": 0,
+                    "total": 0,
+                    "alumnos_con_nota": 0,
+                    "alumnos_evaluados": alumnos_evaluados,
+                    "alumnos_sin_nota": len(alumnos_grupo),
+                    "peso": peso_continua,
+                    "tiene_datos": False,
+                }
+
+    # Estadísticas de sustitutorios
+    notas_sustitutorio = []
+    alumnos_con_sustitutorio = 0
+    alumnos_evaluados_sust = 0
+
+    for matricula in alumnos_grupo:
+        nota = Nota.objects.filter(
+            alumno=matricula.alumno, curso=curso, tipo="S"
+        ).first()
+        # Solo considerar notas válidas (>= 0)
+        if nota and nota.valor is not None and nota.valor >= 0:
+            notas_sustitutorio.append(nota.valor)
+            alumnos_con_sustitutorio += 1
+        # Contar alumnos que tienen registro (aunque sea -1)
+        if nota:
+            alumnos_evaluados_sust += 1
+
+    if notas_sustitutorio:
+        estadisticas["sustitutorios"] = {
+            "promedio": round(sum(notas_sustitutorio) / len(notas_sustitutorio), 2),
+            "maxima": max(notas_sustitutorio),
+            "minima": min(notas_sustitutorio),
+            "total": len(notas_sustitutorio),
+            "alumnos_con_nota": alumnos_con_sustitutorio,
+            "alumnos_evaluados": alumnos_evaluados_sust,
+            "alumnos_sin_nota": len(alumnos_grupo) - alumnos_con_sustitutorio,
+            "tiene_datos": True,
+        }
+    else:
+        estadisticas["sustitutorios"] = {
+            "promedio": 0,
+            "maxima": 0,
+            "minima": 0,
+            "total": 0,
+            "alumnos_con_nota": 0,
+            "alumnos_evaluados": alumnos_evaluados_sust,
+            "alumnos_sin_nota": len(alumnos_grupo),
+            "tiene_datos": False,
+        }
+
+    return estadisticas
+
+
+def obtener_alumno_nota_maxima(grupo_teoria, alumnos_grupo):
+    """Obtiene el alumno con la nota más alta - VERSIÓN CON -1"""
+    curso = grupo_teoria.curso
+    mejor_alumno = None
+    mejor_nota = -1  # Iniciar con -1
+
+    for matricula in alumnos_grupo:
+        nota_final = calcular_nota_final(matricula.alumno, curso)
+        # Solo considerar notas válidas (>= 0)
+        if nota_final is not None and nota_final >= 0:
+            if mejor_nota == -1 or nota_final > mejor_nota:
+                mejor_nota = nota_final
+                mejor_alumno = matricula.alumno
+
+    return {"alumno": mejor_alumno, "nota": mejor_nota} if mejor_alumno else None
+
+
+def obtener_alumno_nota_minima(grupo_teoria, alumnos_grupo):
+    """Obtiene el alumno con la nota más baja - VERSIÓN CON -1"""
+    curso = grupo_teoria.curso
+    peor_alumno = None
+    peor_nota = -1  # Iniciar con -1
+
+    for matricula in alumnos_grupo:
+        nota_final = calcular_nota_final(matricula.alumno, curso)
+        # Solo considerar notas válidas (>= 0)
+        if nota_final is not None and nota_final >= 0:
+            if peor_nota == -1 or nota_final < peor_nota:
+                peor_nota = nota_final
+                peor_alumno = matricula.alumno
+
+    return {"alumno": peor_alumno, "nota": peor_nota} if peor_alumno else None
+
+
+def procesar_examenes(request, grupo_teoria):
+    """
+    Procesa la subida de exámenes PDF usando datos de la base de datos
+    """
+    archivos = request.FILES.getlist("archivos_examen")
+    tipo_examen = request.POST.get("tipo_examen")
+
+    # Mapeo de tipos de examen para el nombre del archivo
+    tipo_map = {"A": "alta", "P": "promedio", "B": "baja"}
+
+    tipo_nombre = tipo_map.get(tipo_examen, "examen")
+    curso_codigo = grupo_teoria.curso.codigo or "0000"
+
+    archivos_procesados = 0
+    errores = []
+
+    # Obtener todos los alumnos del grupo desde la base de datos
+    alumnos_grupo = MatriculaCurso.objects.filter(
+        curso=grupo_teoria.curso, turno=grupo_teoria.turno
+    ).select_related("alumno")
+
+    # Crear diccionario de alumnos por DNI para búsqueda rápida
+    alumnos_dict = {
+        alumno_matricula.alumno.dni: alumno_matricula.alumno
+        for alumno_matricula in alumnos_grupo
+    }
+
+    for archivo in archivos:
+        # Extraer DNI del nombre del archivo
+        nombre_archivo = archivo.name
+
+        # Buscar DNI en el nombre del archivo (puede estar en diferentes formatos)
+        import re
+
+        dni_match = re.search(r"(\d{8})", nombre_archivo)
+
+        if not dni_match:
+            errores.append(f"Formato inválido: {nombre_archivo} - No se encontró DNI")
+            continue
+
+        dni_alumno = dni_match.group(1)
+
+        # Buscar alumno en el diccionario
+        alumno = alumnos_dict.get(dni_alumno)
+
+        if not alumno:
+            errores.append(f"Alumno con DNI {dni_alumno} no encontrado en este grupo")
+            continue
+
+        try:
+            # Generar nuevo nombre para el archivo usando datos de la base de datos
+            nuevo_nombre = f"{alumno.dni}_{curso_codigo}_{tipo_nombre}.pdf"
+
+            # Asignar el nuevo nombre al archivo
+            archivo.name = nuevo_nombre
+
+            # Crear o actualizar examen
+            examen, created = Examen.objects.get_or_create(
+                alumno=alumno,
+                GrupoTeoria=grupo_teoria,
+                tipo=tipo_examen,
+                defaults={"archivo": archivo},
+            )
+
+            if not created:
+                # Si ya existe, eliminar el archivo anterior y guardar el nuevo
+                if examen.archivo:
+                    examen.archivo.delete(save=False)
+                examen.archivo = archivo
+                examen.save()
+
+            archivos_procesados += 1
+
+        except Exception as e:
+            errores.append(f"Error con {nombre_archivo}: {str(e)}")
+            continue
+
+    # Mostrar mensajes de resultado
+    if archivos_procesados > 0:
+        messages.success(
+            request, f"Se procesaron {archivos_procesados} archivos correctamente"
+        )
+
+    if errores:
+        messages.error(request, f"Errores: {', '.join(errores[:5])}")
+
+
+def descargar_estadisticas_excel(request, grupo_teoria, alumnos_grupo):
+    """
+    Genera y descarga un Excel con las estadísticas - VERSIÓN CON -1
+    """
+    try:
+        curso = grupo_teoria.curso
+
+        # Crear DataFrame con datos de alumnos
+        data = []
+        for matricula in alumnos_grupo:
+            alumno = matricula.alumno
+            nota_final = calcular_nota_final(alumno, curso)
+
+            # Obtener notas individuales (solo mostrar >= 0)
+            notas_parciales = {1: "", 2: "", 3: ""}
+            notas_continuas = {1: "", 2: "", 3: ""}
+            nota_sustitutorio = ""
+
+            for periodo in [1, 2, 3]:
+                nota_parcial = Nota.objects.filter(
+                    alumno=alumno, curso=curso, tipo="P", periodo=periodo
+                ).first()
+                if (
+                    nota_parcial
+                    and nota_parcial.valor is not None
+                    and nota_parcial.valor >= 0
+                ):
+                    notas_parciales[periodo] = nota_parcial.valor
+
+                nota_continua = Nota.objects.filter(
+                    alumno=alumno, curso=curso, tipo="C", periodo=periodo
+                ).first()
+                if (
+                    nota_continua
+                    and nota_continua.valor is not None
+                    and nota_continua.valor >= 0
+                ):
+                    notas_continuas[periodo] = nota_continua.valor
+
+            nota_sust = Nota.objects.filter(
+                alumno=alumno, curso=curso, tipo="S"
+            ).first()
+            if nota_sust and nota_sust.valor is not None and nota_sust.valor >= 0:
+                nota_sustitutorio = nota_sust.valor
+
+            # Determinar estado
+            estado = "Sin nota"
+            if nota_final is not None and nota_final >= 0:
+                estado = "Aprobado" if nota_final >= 10.5 else "Desaprobado"
+
+            data.append(
+                {
+                    "DNI": alumno.dni,
+                    "Alumno": alumno.nombre,
+                    "Parcial 1": notas_parciales[1],
+                    "Parcial 2": notas_parciales[2],
+                    "Parcial 3": notas_parciales[3],
+                    "Continua 1": notas_continuas[1],
+                    "Continua 2": notas_continuas[2],
+                    "Continua 3": notas_continuas[3],
+                    "Sustitutorio": nota_sustitutorio,
+                    "Nota Final": nota_final
+                    if nota_final is not None and nota_final >= 0
+                    else "",
+                    "Estado": estado,
+                }
+            )
+
+        # Crear DataFrame principal
+        df = pd.DataFrame(data)
+
+        # Crear output
+        output = io.BytesIO()
+
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            # Hoja 1: Datos de alumnos
+            df.to_excel(writer, sheet_name="Estadisticas_Alumnos", index=False)
+
+            # Hoja 2: Resumen general
+            resumen_data = []
+            if data:
+                # Solo considerar notas válidas (>= 0)
+                notas_finales = [
+                    d["Nota Final"]
+                    for d in data
+                    if d["Nota Final"] != "" and float(d["Nota Final"]) >= 0
+                ]
+
+                if notas_finales:
+                    aprobados = sum(1 for d in data if d["Estado"] == "Aprobado")
+                    desaprobados = sum(1 for d in data if d["Estado"] == "Desaprobado")
+                    sin_nota = sum(1 for d in data if d["Estado"] == "Sin nota")
+
+                    resumen_data.extend(
+                        [
+                            ["Total Alumnos", len(data)],
+                            ["Con Nota Final", len(notas_finales)],
+                            ["Sin Nota Final", sin_nota],
+                            ["Aprobados", aprobados],
+                            ["Desaprobados", desaprobados],
+                            [
+                                "Tasa Aprobación",
+                                f"{(aprobados / len(notas_finales) * 100):.2f}%"
+                                if notas_finales
+                                else "0%",
+                            ],
+                            [
+                                "Nota Promedio",
+                                f"{sum(notas_finales) / len(notas_finales):.2f}"
+                                if notas_finales
+                                else "0.00",
+                            ],
+                            [
+                                "Nota Máxima",
+                                f"{max(notas_finales):.2f}"
+                                if notas_finales
+                                else "0.00",
+                            ],
+                            [
+                                "Nota Mínima",
+                                f"{min(notas_finales):.2f}"
+                                if notas_finales
+                                else "0.00",
+                            ],
+                        ]
+                    )
+                else:
+                    resumen_data.extend(
+                        [
+                            ["Total Alumnos", len(data)],
+                            ["Con Nota Final", 0],
+                            ["Sin Nota Final", len(data)],
+                            ["Aprobados", 0],
+                            ["Desaprobados", 0],
+                            ["Tasa Aprobación", "0%"],
+                            ["Nota Promedio", "0.00"],
+                            ["Nota Máxima", "0.00"],
+                            ["Nota Mínima", "0.00"],
+                        ]
+                    )
+
+            df_resumen = pd.DataFrame(resumen_data, columns=["Métrica", "Valor"])
+            df_resumen.to_excel(writer, sheet_name="Resumen_General", index=False)
+
+            # Ajustar el ancho de las columnas automáticamente
+            for sheet_name in writer.sheets:
+                worksheet = writer.sheets[sheet_name]
+                for column in worksheet.columns:
+                    max_length = 0
+                    column_letter = column[0].column_letter
+                    for cell in column:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+                    adjusted_width = min(max_length + 2, 50)
+                    worksheet.column_dimensions[column_letter].width = adjusted_width
+
+        output.seek(0)
+
+        # Crear respuesta HTTP
+        response = HttpResponse(
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="estadisticas_{grupo_teoria.curso.nombre}_{grupo_teoria.turno}.xlsx"'
+        )
+
+        return response
+
+    except Exception as e:
+        messages.error(request, f"Error al generar Excel: {str(e)}")
+        return redirect("revisar_estadisticas")
+
+
+def calcular_estadisticas_avance(grupo_teoria, alumnos_grupo):
+    """
+    Calcula estadísticas de avance por periodos para gráficos - VERSIÓN CON -1
+    """
+    curso = grupo_teoria.curso
+    estadisticas_avance = {
+        "parciales": {
+            "periodos": [],
+            "promedios": [],
+            "tiene_datos": [],
+            "alumnos_evaluados": [],
+        },
+        "continuas": {
+            "periodos": [],
+            "promedios": [],
+            "tiene_datos": [],
+            "alumnos_evaluados": [],
+        },
+    }
+
+    # Estadísticas de avance de parciales
+    for periodo in [1, 2, 3]:
+        peso_parcial = getattr(curso, f"peso_parcial_{periodo}", 0)
+        if peso_parcial > 0:
+            notas_periodo = []
+            alumnos_evaluados = 0
+
+            for matricula in alumnos_grupo:
+                nota = Nota.objects.filter(
+                    alumno=matricula.alumno, curso=curso, tipo="P", periodo=periodo
+                ).first()
+                # Solo considerar notas válidas (>= 0)
+                if nota and nota.valor is not None and nota.valor >= 0:
+                    notas_periodo.append(nota.valor)
+                    alumnos_evaluados += 1
+
+            tiene_datos = len(notas_periodo) > 0
+            promedio = (
+                round(sum(notas_periodo) / len(notas_periodo), 2) if tiene_datos else 0
+            )
+
+            estadisticas_avance["parciales"]["periodos"].append(f"P{periodo}")
+            estadisticas_avance["parciales"]["promedios"].append(promedio)
+            estadisticas_avance["parciales"]["tiene_datos"].append(tiene_datos)
+            estadisticas_avance["parciales"]["alumnos_evaluados"].append(
+                alumnos_evaluados
+            )
+
+    # Estadísticas de avance de continuas
+    for periodo in [1, 2, 3]:
+        peso_continua = getattr(curso, f"peso_continua_{periodo}", 0)
+        if peso_continua > 0:
+            notas_periodo = []
+            alumnos_evaluados = 0
+
+            for matricula in alumnos_grupo:
+                nota = Nota.objects.filter(
+                    alumno=matricula.alumno, curso=curso, tipo="C", periodo=periodo
+                ).first()
+                # Solo considerar notas válidas (>= 0)
+                if nota and nota.valor is not None and nota.valor >= 0:
+                    notas_periodo.append(nota.valor)
+                    alumnos_evaluados += 1
+
+            tiene_datos = len(notas_periodo) > 0
+            promedio = (
+                round(sum(notas_periodo) / len(notas_periodo), 2) if tiene_datos else 0
+            )
+
+            estadisticas_avance["continuas"]["periodos"].append(f"C{periodo}")
+            estadisticas_avance["continuas"]["promedios"].append(promedio)
+            estadisticas_avance["continuas"]["tiene_datos"].append(tiene_datos)
+            estadisticas_avance["continuas"]["alumnos_evaluados"].append(
+                alumnos_evaluados
+            )
+
+    return estadisticas_avance
 
 
 # =======================Vista de Admin====================================================
