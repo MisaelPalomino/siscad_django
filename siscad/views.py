@@ -804,7 +804,7 @@ def determinar_estado_curso(promedio_final, curso, notas_parciales, notas_contin
         return "en_proceso"
 
     # Determinar aprobación basado en el promedio final
-    if promedio_final >= 13:  # Umbral de aprobación
+    if promedio_final >= 10.5:  # Umbral de aprobación
         return "aprobado"
     else:
         return "desaprobado"
