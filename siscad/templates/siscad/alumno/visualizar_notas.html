@@ -1,150 +1,350 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Notas del Alumno</title>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Notas - Sistema Académico</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-      .notas-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      .curso-card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 20px;
-        background-color: #f9f9f9;
-      }
-      .notas-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 10px;
-      }
-      .notas-table th,
-      .notas-table td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-      }
-      .notas-table th {
-        background-color: #e9ecef;
-      }
-      .promedios {
-        margin-top: 10px;
-        padding: 10px;
-        background-color: #e7f3ff;
-        border-radius: 5px;
-      }
-      .header-info {
-        background-color: #007bff;
-        color: white;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 20px;
-      }
-      .peso-info {
-        font-size: 0.9em;
-        color: #666;
-        margin-top: 5px;
-      }
-      .tipo-section {
-        margin: 10px 0;
-        padding: 10px;
-        background-color: #f8f9fa;
-        border-radius: 5px;
-      }
+        .card-estadistica {
+            transition: transform 0.2s;
+        }
+        .card-estadistica:hover {
+            transform: translateY(-5px);
+        }
+        .badge-aprobado { background-color: #28a745; }
+        .badge-desaprobado { background-color: #dc3545; }
+        .badge-en-proceso { background-color: #ffc107; color: #000; }
+        .progress { height: 20px; }
+        .table-notas th { background-color: #f8f9fa; }
+        .estadistica-numero { font-size: 2rem; font-weight: bold; }
     </style>
-  </head>
-  <body>
-    <div class="notas-container">
-      <div class="header-info">
-        <h1>Notas del Alumno</h1>
-        <p>
-          <strong>Nombre:</strong> {{ alumno.nombre }} {{ alumno.apellido }}
-        </p>
-        <p><strong>CUI:</strong> {{ alumno.cui }}</p>
-        <p><strong>Semestre:</strong> {{ semestre_actual }}</p>
-        <p><strong>Total de cursos matriculados:</strong> {{ total_cursos }}</p>
-      </div>
-
-      {% for curso_data in notas_por_curso %}
-      <div class="curso-card">
-        <h3>
-          {{ curso_data.curso }} ({{ curso_data.codigo_curso }}) - Turno {{
-          curso_data.turno }}
-        </h3>
-
-        {% if curso_data.notas %}
-        <table class="notas-table">
-          <thead>
-            <tr>
-              <th>Tipo</th>
-              <th>Evaluación</th>
-              <th>Valor</th>
-              <th>Peso</th>
-              <th>Contribución</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for nota in curso_data.notas %}
-            <tr>
-              <td>{{ nota.get_tipo_display }}</td>
-              <td>{{ nota.get_tipo_display }} {{ nota.periodo }}</td>
-              <td>{{ nota.valor|default:"-" }}</td>
-              <td>{{ nota.peso }}%</td>
-              <td>
-                {% if nota.valor is not None %} {{ nota.valor }} × {{ nota.peso
-                }}% = {{ nota.valor|floatformat:2 }} {% else %} - {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-
-        <div class="promedios">
-          <div class="tipo-section">
-            <h4>Evaluaciones Parciales</h4>
-            {% for nota in curso_data.notas_parciales %}
-            <div>
-              Parcial {{ nota.periodo }}: {{ nota.valor }} ({{ nota.peso }}%)
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1 class="h3">
+                        <i class="bi bi-journal-text"></i> Mis Notas Académicas
+                    </h1>
+                    <div class="text-end">
+                        <h5 class="mb-1">{{ alumno.nombre }}</h5>
+                        <small class="text-muted">Semestre {{ semestre_actual }}</small>
+                    </div>
+                </div>
             </div>
-            {% empty %}
-            <div>No hay evaluaciones parciales</div>
-            {% endfor %} {% if curso_data.notas_parciales %}
-            <p>
-              <strong>Promedio Parcial:</strong> {{ curso_data.promedio_parcial }}
-            </p>
-            {% endif %}
-          </div>
-
-          <div class="tipo-section">
-            <h4>Evaluaciones Continuas</h4>
-            {% for nota in curso_data.notas_continuas %}
-            <div>
-              Continua {{ nota.periodo }}: {{ nota.valor }} ({{ nota.peso }}%)
-            </div>
-            {% empty %}
-            <div>No hay evaluaciones continuas</div>
-            {% endfor %} {% if curso_data.notas_continuas %}
-            <p>
-              <strong>Promedio Continua:</strong> {{ curso_data.promedio_continua }}
-            </p>
-            {% endif %}
-          </div>
-
-          <p>
-            <strong>Promedio Final:</strong> {{ curso_data.promedio_final }}
-          </p>
         </div>
-        {% else %}
-        <p>No hay notas registradas para este curso.</p>
-        {% endif %}
-      </div>
-      {% empty %}
-      <div class="curso-card">
-        <p>No estás matriculado en ningún curso.</p>
-      </div>
-      {% endfor %}
+
+        <!-- Estadísticas Generales -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-graph-up"></i> Estadísticas Generales</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-3 mb-3">
+                                <div class="card card-estadistica border-success">
+                                    <div class="card-body">
+                                        <div class="estadistica-numero text-success">{{ estadisticas.promedio_general }}</div>
+                                        <small class="text-muted">Promedio General</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card card-estadistica border-info">
+                                    <div class="card-body">
+                                        <div class="estadistica-numero text-info">{{ estadisticas.total_cursos }}</div>
+                                        <small class="text-muted">Total Cursos</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card card-estadistica border-success">
+                                    <div class="card-body">
+                                        <div class="estadistica-numero text-success">{{ estadisticas.cursos_aprobados }}</div>
+                                        <small class="text-muted">Cursos Aprobados</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card card-estadistica border-warning">
+                                    <div class="card-body">
+                                        <div class="estadistica-numero text-warning">{{ estadisticas.cursos_en_proceso }}</div>
+                                        <small class="text-muted">En Proceso</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gráficos -->
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Distribución de Cursos</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="chartEstadoCursos" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Rendimiento por Curso</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="chartRendimiento" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detalle por Curso -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="bi bi-list-check"></i> Detalle por Curso</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if notas_por_curso %}
+                            {% for curso_data in notas_por_curso %}
+                            <div class="card mb-4">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        {{ curso_data.nombre_curso }} 
+                                        <small class="text-muted">({{ curso_data.codigo_curso }}) - Turno {{ curso_data.turno }}</small>
+                                    </h6>
+                                    <div>
+                                        {% if curso_data.promedio_final %}
+                                            <span class="badge {% if curso_data.estado == 'aprobado' %}badge-aprobado{% elif curso_data.estado == 'desaprobado' %}badge-desaprobado{% else %}badge-en-proceso{% endif %}">
+                                                {{ curso_data.estado|title }} - {{ curso_data.promedio_final }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-en-proceso">En Proceso</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Barra de Progreso -->
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small>Progreso de Evaluación</small>
+                                            <small>{{ curso_data.progreso }}%</small>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar 
+                                                {% if curso_data.progreso < 50 %}bg-warning
+                                                {% elif curso_data.progreso < 80 %}bg-info
+                                                {% else %}bg-success{% endif %}" 
+                                                role="progressbar" 
+                                                style="width: {{ curso_data.progreso }}%">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">
+                                            {{ curso_data.total_notas_registradas }} de {{ curso_data.total_notas_esperadas }} notas registradas
+                                        </small>
+                                    </div>
+
+                                    <!-- Notas del Curso -->
+                                    <div class="row">
+                                        <!-- Notas Parciales -->
+                                        {% if curso_data.configuracion_curso.tiene_parciales %}
+                                        <div class="col-md-6">
+                                            <h6>Notas Parciales</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Parcial</th>
+                                                            <th>Nota</th>
+                                                            <th>Peso</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for parcial in curso_data.datos_parciales %}
+                                                        <tr>
+                                                            <td>Parcial {{ parcial.periodo }}</td>
+                                                            <td>
+                                                                {% if parcial.nota is not None %}
+                                                                    {{ parcial.nota }}
+                                                                {% else %}
+                                                                    <span class="text-muted">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td>{{ parcial.peso }}%</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Notas Continuas -->
+                                        {% if curso_data.configuracion_curso.tiene_continua %}
+                                        <div class="col-md-6">
+                                            <h6>Notas Continuas</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Continua</th>
+                                                            <th>Nota</th>
+                                                            <th>Peso</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for continua in curso_data.datos_continuas %}
+                                                        <tr>
+                                                            <td>Continua {{ continua.periodo }}</td>
+                                                            <td>
+                                                                {% if continua.nota is not None %}
+                                                                    {{ continua.nota }}
+                                                                {% else %}
+                                                                    <span class="text-muted">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td>{{ continua.peso }}%</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Sustitutorio -->
+                                    {% if curso_data.nota_sustitutorio %}
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <div class="alert alert-info">
+                                                <h6><i class="bi bi-arrow-repeat"></i> Sustitutorio Aplicado</h6>
+                                                <p class="mb-0">Nota de Sustitutorio: <strong>{{ curso_data.nota_sustitutorio }}</strong></p>
+                                                <small class="text-muted">Esta nota reemplaza la más baja entre Parcial 1 y Parcial 2</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Resumen Final -->
+                                    {% if curso_data.promedio_final %}
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <div class="alert {% if curso_data.estado == 'aprobado' %}alert-success{% else %}alert-danger{% endif %}">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">Nota Final: {{ curso_data.promedio_final }}</h6>
+                                                        <p class="mb-0">Estado: <strong>{{ curso_data.estado|title }}</strong></p>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        {% if curso_data.estado == 'aprobado' %}
+                                                            <i class="bi bi-check-circle-fill display-6 text-success"></i>
+                                                        {% else %}
+                                                            <i class="bi bi-exclamation-circle-fill display-6 text-danger"></i>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-inbox display-1 text-muted"></i>
+                                <h4 class="text-muted mt-3">No tienes cursos matriculados</h4>
+                                <p class="text-muted">No se encontraron cursos para mostrar las notas.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </body>
+
+    <script>
+        // Gráfico de distribución de cursos
+        const ctxEstado = document.getElementById('chartEstadoCursos').getContext('2d');
+        new Chart(ctxEstado, {
+            type: 'doughnut',
+            data: {
+                labels: ['Aprobados', 'En Proceso', 'Desaprobados'],
+                datasets: [{
+                    data: [
+                        {{ estadisticas.cursos_aprobados }},
+                        {{ estadisticas.cursos_en_proceso }},
+                        {{ estadisticas.cursos_desaprobados }}
+                    ],
+                    backgroundColor: [
+                        '#28a745',
+                        '#ffc107', 
+                        '#dc3545'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Gráfico de rendimiento
+        const ctxRendimiento = document.getElementById('chartRendimiento').getContext('2d');
+        const cursos = [{% for curso in notas_por_curso %}'{{ curso.nombre_curso|slice:":15" }}...',{% endfor %}];
+        const promedios = [{% for curso in notas_por_curso %}{{ curso.promedio_final|default:0 }},{% endfor %}];
+        
+        new Chart(ctxRendimiento, {
+            type: 'bar',
+            data: {
+                labels: cursos,
+                datasets: [{
+                    label: 'Promedio',
+                    data: promedios,
+                    backgroundColor: promedios.map(p => p >= 13 ? '#28a745' : p > 0 ? '#ffc107' : '#6c757d'),
+                    borderColor: promedios.map(p => p >= 13 ? '#218838' : p > 0 ? '#e0a800' : '#545b62'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 20,
+                        title: {
+                            display: true,
+                            text: 'Nota'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 </html>

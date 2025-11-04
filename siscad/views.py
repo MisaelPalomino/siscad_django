@@ -496,90 +496,341 @@ def visualizar_notas(request):
     matriculas = MatriculaCurso.objects.filter(alumno=alumno).select_related("curso")
 
     notas_por_curso = []
+    estadisticas_generales = {
+        "total_cursos": 0,
+        "cursos_aprobados": 0,
+        "cursos_desaprobados": 0,
+        "cursos_en_proceso": 0,
+        "promedio_general": 0,
+        "mejor_nota": 0,
+        "peor_nota": 20,
+        "total_notas_registradas": 0,
+        "cursos_con_sustitutorio": 0,
+    }
+
+    suma_promedios = 0
+    cursos_con_promedio = 0
 
     for matricula in matriculas:
         curso = matricula.curso
         turno = matricula.turno
 
+        # Obtener todas las notas del curso
         notas_curso = Nota.objects.filter(alumno=alumno, curso=curso).order_by(
             "tipo", "periodo"
         )
 
-        suma_ponderada = 0
-        total_pesos = 0
-
-        notas_parciales = []
-        notas_continuas = []
+        # Organizar notas por tipo
+        notas_parciales = {1: None, 2: None, 3: None}
+        notas_continuas = {1: None, 2: None, 3: None}
+        nota_sustitutorio = None
 
         for nota in notas_curso:
-            # Tratar las notas nulas como 0
-            valor_nota = nota.valor if nota.valor is not None else 0
+            if nota.tipo == "P" and nota.periodo in [1, 2, 3]:
+                notas_parciales[nota.periodo] = nota.valor
+            elif nota.tipo == "C" and nota.periodo in [1, 2, 3]:
+                notas_continuas[nota.periodo] = nota.valor
+            elif nota.tipo == "S":
+                nota_sustitutorio = nota.valor
 
-            suma_ponderada += valor_nota * nota.peso
-            total_pesos += nota.peso
+        # Calcular nota final considerando sustitutorio
+        promedio_final = calcular_nota_final_alumno(alumno, curso)
 
-            if nota.tipo == "P":
-                notas_parciales.append(
-                    {
-                        "valor": valor_nota,
-                        "peso": nota.peso,
-                        "periodo": nota.periodo,
-                    }
-                )
-            elif nota.tipo == "C":
-                notas_continuas.append(
-                    {
-                        "valor": valor_nota,
-                        "peso": nota.peso,
-                        "periodo": nota.periodo,
-                    }
-                )
-
-        promedio_final = suma_ponderada / total_pesos if total_pesos > 0 else 0
-
-        promedio_parcial = (
-            sum([n["valor"] for n in notas_parciales]) / len(notas_parciales)
-            if notas_parciales
-            else 0
-        )
-        promedio_continua = (
-            sum([n["valor"] for n in notas_continuas]) / len(notas_continuas)
-            if notas_continuas
-            else 0
+        # Determinar estado del curso
+        estado_curso = determinar_estado_curso(
+            promedio_final, curso, notas_parciales, notas_continuas
         )
 
-        if promedio_continua <= 0:
-            promedio_continua = 0
-        if promedio_parcial <= 0:
-            promedio_parcial = 0
+        # Estadísticas del curso
+        notas_validas = [n.valor for n in notas_curso if n.valor is not None]
+        total_notas_curso = len(notas_validas)
+        promedio_curso = sum(notas_validas) / len(notas_validas) if notas_validas else 0
+
+        # Actualizar estadísticas generales
+        estadisticas_generales["total_cursos"] += 1
+        estadisticas_generales["total_notas_registradas"] += total_notas_curso
+
+        if estado_curso == "aprobado":
+            estadisticas_generales["cursos_aprobados"] += 1
+        elif estado_curso == "desaprobado":
+            estadisticas_generales["cursos_desaprobados"] += 1
+        else:
+            estadisticas_generales["cursos_en_proceso"] += 1
+
+        if promedio_final and promedio_final > 0:
+            suma_promedios += promedio_final
+            cursos_con_promedio += 1
+            estadisticas_generales["mejor_nota"] = max(
+                estadisticas_generales["mejor_nota"], promedio_final
+            )
+            estadisticas_generales["peor_nota"] = min(
+                estadisticas_generales["peor_nota"], promedio_final
+            )
+
+        if nota_sustitutorio:
+            estadisticas_generales["cursos_con_sustitutorio"] += 1
+
+        # Progreso del curso (porcentaje de notas registradas vs esperadas)
+        total_notas_esperadas = calcular_total_notas_esperadas(curso)
+        progreso_curso = (
+            (total_notas_curso / total_notas_esperadas * 100)
+            if total_notas_esperadas > 0
+            else 0
+        )
+
+        # Preparar datos para mostrar en tabla
+        datos_parciales = []
+        datos_continuas = []
+
+        for periodo in [1, 2, 3]:
+            peso_parcial = getattr(curso, f"peso_parcial_{periodo}", 0)
+            if peso_parcial > 0:
+                datos_parciales.append(
+                    {
+                        "periodo": periodo,
+                        "nota": notas_parciales[periodo],
+                        "peso": peso_parcial,
+                    }
+                )
+
+            peso_continua = getattr(curso, f"peso_continua_{periodo}", 0)
+            if peso_continua > 0:
+                datos_continuas.append(
+                    {
+                        "periodo": periodo,
+                        "nota": notas_continuas[periodo],
+                        "peso": peso_continua,
+                    }
+                )
 
         notas_por_curso.append(
             {
-                "curso": curso.nombre,
+                "curso": curso,
+                "nombre_curso": curso.nombre,
                 "codigo_curso": curso.codigo,
                 "turno": turno,
-                "notas": list(notas_curso),
-                "promedio_final": round(promedio_final, 2),
-                "promedio_parcial": round(promedio_parcial, 2),
-                "promedio_continua": round(promedio_continua, 2),
-                "total_notas": len(notas_curso),
-                "total_pesos": total_pesos,
-                "notas_parciales": notas_parciales,
-                "notas_continuas": notas_continuas,
-                "suma_ponderada": round(suma_ponderada, 2),
+                "datos_parciales": datos_parciales,
+                "datos_continuas": datos_continuas,
+                "nota_sustitutorio": nota_sustitutorio,
+                "promedio_final": round(promedio_final, 2) if promedio_final else None,
+                "estado": estado_curso,
+                "progreso": round(progreso_curso, 1),
+                "total_notas_registradas": total_notas_curso,
+                "total_notas_esperadas": total_notas_esperadas,
+                "notas_totales": list(notas_curso),
+                "configuracion_curso": {
+                    "tiene_continua": any(
+                        [
+                            curso.peso_continua_1 > 0,
+                            curso.peso_continua_2 > 0,
+                            curso.peso_continua_3 > 0,
+                        ]
+                    ),
+                    "tiene_parciales": any(
+                        [
+                            curso.peso_parcial_1 > 0,
+                            curso.peso_parcial_2 > 0,
+                            curso.peso_parcial_3 > 0,
+                        ]
+                    ),
+                    "tiene_sustitutorio": (
+                        curso.peso_parcial_1 > 0 and curso.peso_parcial_2 > 0
+                    ),
+                    "pesos_continua": {
+                        1: curso.peso_continua_1,
+                        2: curso.peso_continua_2,
+                        3: curso.peso_continua_3,
+                    },
+                    "pesos_parcial": {
+                        1: curso.peso_parcial_1,
+                        2: curso.peso_parcial_2,
+                        3: curso.peso_parcial_3,
+                    },
+                },
             }
         )
+
+    # Calcular promedio general
+    if cursos_con_promedio > 0:
+        estadisticas_generales["promedio_general"] = round(
+            suma_promedios / cursos_con_promedio, 2
+        )
+
+    # Calcular porcentajes para gráficos
+    if estadisticas_generales["total_cursos"] > 0:
+        estadisticas_generales["porcentaje_aprobados"] = round(
+            (
+                estadisticas_generales["cursos_aprobados"]
+                / estadisticas_generales["total_cursos"]
+            )
+            * 100,
+            1,
+        )
+        estadisticas_generales["porcentaje_desaprobados"] = round(
+            (
+                estadisticas_generales["cursos_desaprobados"]
+                / estadisticas_generales["total_cursos"]
+            )
+            * 100,
+            1,
+        )
+        estadisticas_generales["porcentaje_en_proceso"] = round(
+            (
+                estadisticas_generales["cursos_en_proceso"]
+                / estadisticas_generales["total_cursos"]
+            )
+            * 100,
+            1,
+        )
+    else:
+        estadisticas_generales.update(
+            {
+                "porcentaje_aprobados": 0,
+                "porcentaje_desaprobados": 0,
+                "porcentaje_en_proceso": 0,
+            }
+        )
+
+    # Ordenar cursos por estado y promedio
+    notas_por_curso.sort(
+        key=lambda x: (
+            0 if x["estado"] == "aprobado" else 1 if x["estado"] == "en_proceso" else 2,
+            -x["promedio_final"] if x["promedio_final"] else 0,
+        )
+    )
 
     context = {
         "alumno": alumno,
         "notas_por_curso": notas_por_curso,
-        "total_cursos": len(notas_por_curso),
+        "estadisticas": estadisticas_generales,
         "semestre_actual": alumno.calcular_semestre() or "No asignado",
         "nombre": nombre,
         "rol": rol,
     }
 
     return render(request, "siscad/alumno/visualizar_notas.html", context)
+
+
+# Funciones auxiliares
+def calcular_nota_final_alumno(alumno, curso):
+    """
+    Calcula la nota final para un alumno en un curso específico
+    """
+    notas = Nota.objects.filter(alumno=alumno, curso=curso)
+
+    continuas = {n.periodo: n for n in notas if n.tipo == "C" and n.valor is not None}
+    parciales = {n.periodo: n for n in notas if n.tipo == "P" and n.valor is not None}
+    sustitutorio = next(
+        (n for n in notas if n.tipo == "S" and n.valor is not None), None
+    )
+
+    # Aplicar sustitutorio si existe
+    if (
+        sustitutorio
+        and sustitutorio.valor is not None
+        and 1 in parciales
+        and 2 in parciales
+    ):
+        if parciales[1].valor <= parciales[2].valor:
+            nota_original_p1 = parciales[1].valor
+            parciales[1].valor = sustitutorio.valor
+        else:
+            nota_original_p2 = parciales[2].valor
+            parciales[2].valor = sustitutorio.valor
+
+    # Calcular promedio ponderado
+    total_puntos = 0
+    total_pesos = 0
+
+    # Sumar continuas
+    for periodo in [1, 2, 3]:
+        if periodo in continuas:
+            peso = getattr(curso, f"peso_continua_{periodo}", 0)
+            if peso > 0:
+                total_puntos += continuas[periodo].valor * peso
+                total_pesos += peso
+
+    # Sumar parciales
+    for periodo in [1, 2, 3]:
+        if periodo in parciales:
+            peso = getattr(curso, f"peso_parcial_{periodo}", 0)
+            if peso > 0:
+                total_puntos += parciales[periodo].valor * peso
+                total_pesos += peso
+
+    if total_pesos == 0:
+        return None
+
+    nota_final = total_puntos / total_pesos
+
+    # Restaurar notas originales si se aplicó sustitutorio
+    if (
+        sustitutorio
+        and sustitutorio.valor is not None
+        and 1 in parciales
+        and 2 in parciales
+    ):
+        if "nota_original_p1" in locals():
+            parciales[1].valor = nota_original_p1
+        elif "nota_original_p2" in locals():
+            parciales[2].valor = nota_original_p2
+
+    return round(nota_final, 2)
+
+
+def determinar_estado_curso(promedio_final, curso, notas_parciales, notas_continuas):
+    """
+    Determina el estado del curso (aprobado, desaprobado, en proceso)
+    """
+    if promedio_final is None:
+        return "en_proceso"
+
+    # Verificar si todas las notas necesarias están registradas
+    notas_faltantes = False
+
+    # Verificar parciales
+    for periodo in [1, 2, 3]:
+        peso_parcial = getattr(curso, f"peso_parcial_{periodo}", 0)
+        if peso_parcial > 0 and notas_parciales[periodo] is None:
+            notas_faltantes = True
+
+    # Verificar continuas
+    for periodo in [1, 2, 3]:
+        peso_continua = getattr(curso, f"peso_continua_{periodo}", 0)
+        if peso_continua > 0 and notas_continuas[periodo] is None:
+            notas_faltantes = True
+
+    if notas_faltantes:
+        return "en_proceso"
+
+    # Determinar aprobación basado en el promedio final
+    if promedio_final >= 13:  # Umbral de aprobación
+        return "aprobado"
+    else:
+        return "desaprobado"
+
+
+def calcular_total_notas_esperadas(curso):
+    """
+    Calcula el total de notas esperadas para un curso según su configuración
+    """
+    total = 0
+
+    # Contar parciales esperados
+    for periodo in [1, 2, 3]:
+        if getattr(curso, f"peso_parcial_{periodo}", 0) > 0:
+            total += 1
+
+    # Contar continuas esperadas
+    for periodo in [1, 2, 3]:
+        if getattr(curso, f"peso_continua_{periodo}", 0) > 0:
+            total += 1
+
+    # Agregar sustitutorio si aplica
+    if curso.peso_parcial_1 > 0 and curso.peso_parcial_2 > 0:
+        total += 1
+
+    return total
 
 
 def visualizar_horario_alumno(request):
