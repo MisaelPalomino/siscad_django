@@ -84,4 +84,10 @@ urlpatterns = [
         views.ver_cancelar_reservas,
         name="ver_cancelar_reservas",
     ),
+    path(
+        "profesor/ingresar-notas/",
+        views.ingresar_notas,
+        name="ingresar_notas",
+    ),
+    path('profesor/descargar-plantilla/<int:grupo_id>/', views.descargar_plantilla_excel, name='descargar_plantilla_excel'),
 ]

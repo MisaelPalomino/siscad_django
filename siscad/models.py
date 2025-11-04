@@ -205,6 +205,7 @@ class Nota(models.Model):
     TIPOS = [
         ("P", "Parcial"),
         ("C", "Continua"),
+        ("S", "Sustitutorio"),  
     ]
     tipo = models.CharField(max_length=1, choices=TIPOS)
     periodo = models.PositiveIntegerField()

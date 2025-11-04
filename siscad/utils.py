@@ -552,21 +552,21 @@ def insertar_notas():
         curso = matricula.curso
         alumno = matricula.alumno
 
-        # Notas Parciales (tipo "P")
+        # Notas Parciales (tipo "P") - solo si tienen peso > 0
         parciales = [
             (1, curso.peso_parcial_1),
             (2, curso.peso_parcial_2),
             (3, curso.peso_parcial_3),
         ]
 
-        # Notas Continuas (tipo "C")
+        # Notas Continuas (tipo "C") - solo si tienen peso > 0
         continuas = [
             (1, curso.peso_continua_1),
             (2, curso.peso_continua_2),
             (3, curso.peso_continua_3),
         ]
 
-        # Crear notas si no existen
+        # Crear notas parciales si no existen y tienen peso > 0
         for periodo, peso in parciales:
             if (
                 peso > 0
@@ -581,10 +581,11 @@ def insertar_notas():
                         peso=peso,
                         alumno=alumno,
                         curso=curso,
-                        valor=None,  # Nota aún no registrada
+                        valor=None,
                     )
                 )
 
+        # Crear notas continuas si no existen y tienen peso > 0
         for periodo, peso in continuas:
             if (
                 peso > 0
@@ -599,9 +600,27 @@ def insertar_notas():
                         peso=peso,
                         alumno=alumno,
                         curso=curso,
-                        valor=None,  # Nota aún no registrada
+                        valor=None,
                     )
                 )
+
+        # Crear nota de sustitutorio si el curso tiene al menos 2 parciales con peso > 0
+        # Solo se crea si no existe y el curso tiene parciales 1 y 2
+        if (
+            curso.peso_parcial_1 > 0
+            and curso.peso_parcial_2 > 0
+            and not Nota.objects.filter(alumno=alumno, curso=curso, tipo="S").exists()
+        ):
+            notas_a_crear.append(
+                Nota(
+                    tipo="S",
+                    periodo=1,  # Solo un sustitutorio
+                    peso=1,  # Peso por defecto, se ajustará al calcular
+                    alumno=alumno,
+                    curso=curso,
+                    valor=None,
+                )
+            )
 
     with transaction.atomic():
         Nota.objects.bulk_create(notas_a_crear, batch_size=500)
@@ -1375,7 +1394,6 @@ def insertar_asistencia_alumno():
 
         for alumno in alumnos:
             try:
-
                 # Obtener horarios del alumno (teoría, práctica y laboratorio)
                 horarios_alumno = obtener_horarios_alumno(alumno)
 
@@ -1394,7 +1412,6 @@ def insertar_asistencia_alumno():
                         asistencias_creadas += asistencias_fecha
 
                     fecha_actual += datetime.timedelta(days=1)
-
 
             except Exception as e:
                 print(f"    Error procesando alumno {alumno.nombre}: {str(e)}")
@@ -1606,8 +1623,6 @@ def insertar_asistencia_profesor():
     fecha_inicio = datetime.date(2025, 9, 2)  # 2 de septiembre de 2025
     fecha_fin = datetime.date(2025, 12, 25)  # 25 de diciembre de 2025
     fecha_hoy = datetime.datetime.now().date()  # Fecha actual del sistema
-
-
 
     if fecha_hoy < fecha_fin:
         print(
