@@ -183,7 +183,11 @@
             </div>
         {% endif %}
     </div>
-
+    <div style="margin-top: 30px; text-align: center;">
+            <a href="{% url 'inicio_profesor' %}" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                ← Volver al Dashboard
+            </a>
+        </div>
     <script>
         function marcarTodos(estado) {
             const selects = document.querySelectorAll('.estado-select');

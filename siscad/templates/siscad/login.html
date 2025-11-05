@@ -1,11 +1,192 @@
-<h2>Iniciar sesión</h2>
-<form method="POST">
-  {% csrf_token %}
-  <input type="email" name="email" placeholder="Correo electrónico" required />
-  <input type="text" name="dni" placeholder="DNI" required />
-  <button type="submit">Entrar</button>
-</form>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión</title>
+    <style>
+        /* Variables de colores guinda */
+        :root {
+            --guinda-principal: #800020;
+            --guinda-oscuro: #660019;
+            --guinda-claro: #a62a4a;
+            --texto-claro: #ffffff;
+            --fondo-claro: #f9f9f9;
+            --borde-sutil: #e0e0e0;
+        }
 
-{% for message in messages %}
-<p style="color: red">{{ message }}</p>
-{% endfor %}
+        /* Estilos generales */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 450px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(128, 0, 32, 0.15);
+            overflow: hidden;
+        }
+
+        .login-header {
+            background-color: var(--guinda-principal);
+            color: var(--texto-claro);
+            padding: 25px 20px;
+            text-align: center;
+        }
+
+        .login-header h2 {
+            font-weight: 600;
+            font-size: 1.8rem;
+            margin: 0;
+        }
+
+        .login-form {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        input[type="email"],
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid var(--borde-sutil);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background-color: var(--fondo-claro);
+        }
+
+        input[type="email"]:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--guinda-principal);
+            box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.2);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--guinda-principal);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-login:hover {
+            background-color: var(--guinda-oscuro);
+        }
+
+        .btn-login:active {
+            transform: translateY(2px);
+        }
+
+        .messages {
+            margin-top: 20px;
+        }
+
+        .message {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .message.error {
+            background-color: rgba(255, 0, 0, 0.1);
+            color: #d32f2f;
+            border-left: 4px solid #d32f2f;
+        }
+
+        /* Estilos responsivos */
+        @media (max-width: 480px) {
+            .login-container {
+                border-radius: 8px;
+            }
+            
+            .login-header {
+                padding: 20px 15px;
+            }
+            
+            .login-header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .login-form {
+                padding: 20px;
+            }
+            
+            input[type="email"],
+            input[type="text"],
+            .btn-login {
+                padding: 12px;
+            }
+        }
+
+        /* Efectos adicionales */
+        .login-container {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Placeholder styling */
+        ::placeholder {
+            color: #999;
+        }
+
+        /* Estilo para campos requeridos */
+        input:required {
+            border-left: 3px solid var(--guinda-principal);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h2>Iniciar sesión</h2>
+        </div>
+        <form method="POST" class="login-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <input type="email" name="email" placeholder="Correo electrónico" required />
+            </div>
+            <div class="form-group">
+                <input type="text" name="dni" placeholder="DNI" required />
+            </div>
+            <button type="submit" class="btn-login">Entrar</button>
+        </form>
+        
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message error">{{ message }}</div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

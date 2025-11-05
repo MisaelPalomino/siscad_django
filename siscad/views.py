@@ -960,7 +960,6 @@ def descargar_libreta_excel(alumno):
         # En un entorno real, deberías manejar este error adecuadamente
         from django.contrib import messages
 
-        messages.error(request, f"Error al generar el Excel: {str(e)}")
         return redirect("visualizar_notas")
 
 
