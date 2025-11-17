@@ -1,4 +1,6 @@
 from ..comunes.imports import *
+
+
 def registrar_asistencia(request):
     if "email" not in request.session:
         return redirect("login")
@@ -250,6 +252,9 @@ def obtener_hora_actual_para_grupo(grupo, grupo_tipo, dia_codigo, hora_actual):
     except Exception as e:
         print(f"ERROR obteniendo hora actual para grupo: {e}")
         return None
+
+
+# pa guardar mi token xd
 
 
 def obtener_alumnos_para_grupo(grupo, grupo_tipo):
