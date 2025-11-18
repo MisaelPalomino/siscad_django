@@ -200,6 +200,7 @@ def calcular_estadisticas_generales(grupo_teoria, alumnos_grupo):
 def calcular_estadisticas_detalladas(grupo_teoria, alumnos_grupo):
     """
     Calcula estadísticas detalladas por tipo de evaluación - VERSIÓN CON -1
+    Incluye ahora alumnos con notas máxima y mínima por período
     """
     curso = grupo_teoria.curso
     estadisticas = {"parciales": {}, "continuas": {}, "sustitutorios": {}}
@@ -225,6 +226,14 @@ def calcular_estadisticas_detalladas(grupo_teoria, alumnos_grupo):
                     alumnos_evaluados += 1
 
             if notas_parcial:
+                # Obtener alumnos con nota máxima y mínima para este período
+                alumno_maxima = obtener_alumno_nota_maxima_por_periodo(
+                    grupo_teoria, alumnos_grupo, "P", periodo
+                )
+                alumno_minima = obtener_alumno_nota_minima_por_periodo(
+                    grupo_teoria, alumnos_grupo, "P", periodo
+                )
+
                 estadisticas["parciales"][f"P{periodo}"] = {
                     "promedio": round(sum(notas_parcial) / len(notas_parcial), 2),
                     "maxima": max(notas_parcial),
@@ -235,6 +244,8 @@ def calcular_estadisticas_detalladas(grupo_teoria, alumnos_grupo):
                     "alumnos_sin_nota": len(alumnos_grupo) - alumnos_con_nota,
                     "peso": peso_parcial,
                     "tiene_datos": len(notas_parcial) > 0,
+                    "alumno_maxima": alumno_maxima,
+                    "alumno_minima": alumno_minima,
                 }
             else:
                 # Incluir período incluso sin notas válidas
@@ -248,6 +259,8 @@ def calcular_estadisticas_detalladas(grupo_teoria, alumnos_grupo):
                     "alumnos_sin_nota": len(alumnos_grupo),
                     "peso": peso_parcial,
                     "tiene_datos": False,
+                    "alumno_maxima": None,
+                    "alumno_minima": None,
                 }
 
     # Estadísticas de continuas
@@ -271,6 +284,14 @@ def calcular_estadisticas_detalladas(grupo_teoria, alumnos_grupo):
                     alumnos_evaluados += 1
 
             if notas_continua:
+                # Obtener alumnos con nota máxima y mínima para este período
+                alumno_maxima = obtener_alumno_nota_maxima_por_periodo(
+                    grupo_teoria, alumnos_grupo, "C", periodo
+                )
+                alumno_minima = obtener_alumno_nota_minima_por_periodo(
+                    grupo_teoria, alumnos_grupo, "C", periodo
+                )
+
                 estadisticas["continuas"][f"C{periodo}"] = {
                     "promedio": round(sum(notas_continua) / len(notas_continua), 2),
                     "maxima": max(notas_continua),
@@ -281,6 +302,8 @@ def calcular_estadisticas_detalladas(grupo_teoria, alumnos_grupo):
                     "alumnos_sin_nota": len(alumnos_grupo) - alumnos_con_nota,
                     "peso": peso_continua,
                     "tiene_datos": len(notas_continua) > 0,
+                    "alumno_maxima": alumno_maxima,
+                    "alumno_minima": alumno_minima,
                 }
             else:
                 # Incluir período incluso sin notas válidas
@@ -294,6 +317,8 @@ def calcular_estadisticas_detalladas(grupo_teoria, alumnos_grupo):
                     "alumnos_sin_nota": len(alumnos_grupo),
                     "peso": peso_continua,
                     "tiene_datos": False,
+                    "alumno_maxima": None,
+                    "alumno_minima": None,
                 }
 
     # Estadísticas de sustitutorios
@@ -373,39 +398,101 @@ def obtener_alumno_nota_minima(grupo_teoria, alumnos_grupo):
     return {"alumno": peor_alumno, "nota": peor_nota} if peor_alumno else None
 
 
+def obtener_alumno_nota_maxima_por_periodo(grupo_teoria, alumnos_grupo, tipo, periodo):
+    """Obtiene el alumno con la nota más alta para un período específico"""
+    curso = grupo_teoria.curso
+    mejor_alumno = None
+    mejor_nota = -1
+
+    for matricula in alumnos_grupo:
+        nota = Nota.objects.filter(
+            alumno=matricula.alumno, curso=curso, tipo=tipo, periodo=periodo
+        ).first()
+        if nota and nota.valor is not None and nota.valor >= 0:
+            if mejor_nota == -1 or nota.valor > mejor_nota:
+                mejor_nota = nota.valor
+                mejor_alumno = matricula.alumno
+
+    return {"alumno": mejor_alumno, "nota": mejor_nota} if mejor_alumno else None
+
+
+def obtener_alumno_nota_minima_por_periodo(grupo_teoria, alumnos_grupo, tipo, periodo):
+    """Obtiene el alumno con la nota más baja para un período específico"""
+    curso = grupo_teoria.curso
+    peor_alumno = None
+    peor_nota = -1
+
+    for matricula in alumnos_grupo:
+        nota = Nota.objects.filter(
+            alumno=matricula.alumno, curso=curso, tipo=tipo, periodo=periodo
+        ).first()
+        if nota and nota.valor is not None and nota.valor >= 0:
+            if peor_nota == -1 or nota.valor < peor_nota:
+                peor_nota = nota.valor
+                peor_alumno = matricula.alumno
+
+    return {"alumno": peor_alumno, "nota": peor_nota} if peor_alumno else None
+
+
 def procesar_examenes(request, grupo_teoria):
     """
-    Procesa la subida de exámenes PDF usando los alumnos con nota máxima y mínima
+    Procesa la subida de exámenes PDF usando los alumnos con nota máxima y mínima por período
     """
     archivos = request.FILES.getlist("archivos_examen")
     tipo_examen = request.POST.get("tipo_examen")
+    periodo_seleccionado = request.POST.get("periodo")
+    tipo_evaluacion = request.POST.get(
+        "tipo_evaluacion"
+    )  # 'P' para parcial, 'C' para continua
+
+    # Validar que se haya seleccionado período y tipo de evaluación
+    if not periodo_seleccionado or not tipo_evaluacion:
+        messages.error(request, "Debe seleccionar período y tipo de evaluación")
+        return
 
     # Obtener alumnos del grupo
     alumnos_grupo = MatriculaCurso.objects.filter(
         curso=grupo_teoria.curso, turno=grupo_teoria.turno
     ).select_related("alumno")
 
-    # Obtener alumnos con nota máxima y mínima
-    alumno_maxima = obtener_alumno_nota_maxima(grupo_teoria, alumnos_grupo)
-    alumno_minima = obtener_alumno_nota_minima(grupo_teoria, alumnos_grupo)
-
-    # Determinar qué alumno(s) procesar según el tipo de examen
+    # Determinar qué alumno(s) procesar según el tipo de examen y período
     alumnos_a_procesar = []
 
-    if tipo_examen == "A" and alumno_maxima:  # Examen alta - alumno con máxima nota
-        alumnos_a_procesar.append(alumno_maxima["alumno"])
-    elif tipo_examen == "B" and alumno_minima:  # Examen baja - alumno con mínima nota
-        alumnos_a_procesar.append(alumno_minima["alumno"])
-    elif tipo_examen == "P":  # Examen promedio - todos los alumnos
-        alumnos_a_procesar = [matricula.alumno for matricula in alumnos_grupo]
+    if tipo_examen == "A":  # Examen alta - alumno con máxima nota del período
+        alumno_maxima = obtener_alumno_nota_maxima_por_periodo(
+            grupo_teoria, alumnos_grupo, tipo_evaluacion, int(periodo_seleccionado)
+        )
+        if alumno_maxima:
+            alumnos_a_procesar.append(alumno_maxima["alumno"])
+
+    elif tipo_examen == "B":  # Examen baja - alumno con mínima nota del período
+        alumno_minima = obtener_alumno_nota_minima_por_periodo(
+            grupo_teoria, alumnos_grupo, tipo_evaluacion, int(periodo_seleccionado)
+        )
+        if alumno_minima:
+            alumnos_a_procesar.append(alumno_minima["alumno"])
+
+    elif tipo_examen == "P":  # Examen promedio - todos los alumnos del período con nota
+        for matricula in alumnos_grupo:
+            nota = Nota.objects.filter(
+                alumno=matricula.alumno,
+                curso=grupo_teoria.curso,
+                tipo=tipo_evaluacion,
+                periodo=periodo_seleccionado,
+            ).first()
+            if nota and nota.valor is not None and nota.valor >= 0:
+                alumnos_a_procesar.append(matricula.alumno)
 
     if not alumnos_a_procesar:
         messages.error(request, "No se encontraron alumnos para procesar")
         return
 
-    # Mapeo de tipos de examen para el nombre del archivo
-    tipo_map = {"A": "alta", "P": "promedio", "B": "baja"}
-    tipo_nombre = tipo_map.get(tipo_examen, "examen")
+    # Mapeo de tipos de evaluación y examen para el nombre del archivo
+    tipo_eval_map = {"P": "parcial", "C": "continua"}
+    tipo_examen_map = {"A": "alta", "P": "promedio", "B": "baja"}
+
+    tipo_eval_nombre = tipo_eval_map.get(tipo_evaluacion, "evaluacion")
+    tipo_examen_nombre = tipo_examen_map.get(tipo_examen, "examen")
     curso_codigo = grupo_teoria.curso.codigo or "0000"
 
     archivos_procesados = 0
@@ -438,7 +525,7 @@ def procesar_examenes(request, grupo_teoria):
                     continue
 
             # Generar nuevo nombre para el archivo
-            nuevo_nombre = f"{alumno.dni}_{curso_codigo}_{tipo_nombre}.pdf"
+            nuevo_nombre = f"{alumno.dni}_{curso_codigo}_{tipo_eval_nombre}{periodo_seleccionado}_{tipo_examen_nombre}.pdf"
 
             # Asignar el nuevo nombre al archivo
             archivo.name = nuevo_nombre
@@ -448,6 +535,8 @@ def procesar_examenes(request, grupo_teoria):
                 alumno=alumno,
                 GrupoTeoria=grupo_teoria,
                 tipo=tipo_examen,
+                periodo=periodo_seleccionado,
+                tipo_evaluacion=tipo_evaluacion,
                 defaults={"archivo": archivo},
             )
 

@@ -30,6 +30,9 @@
         .evaluacion-stats { font-size: 0.85rem; color: #6c757d; }
         .estado-evaluacion { font-size: 0.75rem; }
         .sin-datos { color: #6c757d; font-style: italic; }
+        .alumno-destacado { background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 8px 12px; margin: 5px 0; border-radius: 4px; }
+        .alumno-maxima { border-left-color: #28a745; }
+        .alumno-minima { border-left-color: #dc3545; }
     </style>
 </head>
 <body>
@@ -215,6 +218,28 @@
                                                         </span>
                                                     {% endif %}
                                                 </div>
+                                                
+                                                <!-- Mostrar alumnos destacados por período -->
+                                                {% if datos.alumno_maxima or datos.alumno_minima %}
+                                                <div class="mt-2">
+                                                    {% if datos.alumno_maxima %}
+                                                    <div class="alumno-destacado alumno-maxima">
+                                                        <small>
+                                                            <i class="bi bi-trophy-fill text-success"></i>
+                                                            <strong>Máxima:</strong> {{ datos.alumno_maxima.alumno.nombre }} ({{ datos.alumno_maxima.nota }})
+                                                        </small>
+                                                    </div>
+                                                    {% endif %}
+                                                    {% if datos.alumno_minima %}
+                                                    <div class="alumno-destacado alumno-minima">
+                                                        <small>
+                                                            <i class="bi bi-arrow-down-circle-fill text-danger"></i>
+                                                            <strong>Mínima:</strong> {{ datos.alumno_minima.alumno.nombre }} ({{ datos.alumno_minima.nota }})
+                                                        </small>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
                                             </div>
                                             {% endfor %}
                                         </div>
@@ -264,6 +289,28 @@
                                                         </span>
                                                     {% endif %}
                                                 </div>
+                                                
+                                                <!-- Mostrar alumnos destacados por período -->
+                                                {% if datos.alumno_maxima or datos.alumno_minima %}
+                                                <div class="mt-2">
+                                                    {% if datos.alumno_maxima %}
+                                                    <div class="alumno-destacado alumno-maxima">
+                                                        <small>
+                                                            <i class="bi bi-trophy-fill text-success"></i>
+                                                            <strong>Máxima:</strong> {{ datos.alumno_maxima.alumno.nombre }} ({{ datos.alumno_maxima.nota }})
+                                                        </small>
+                                                    </div>
+                                                    {% endif %}
+                                                    {% if datos.alumno_minima %}
+                                                    <div class="alumno-destacado alumno-minima">
+                                                        <small>
+                                                            <i class="bi bi-arrow-down-circle-fill text-danger"></i>
+                                                            <strong>Mínima:</strong> {{ datos.alumno_minima.alumno.nombre }} ({{ datos.alumno_minima.nota }})
+                                                        </small>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
                                             </div>
                                             {% endfor %}
                                         </div>
@@ -478,6 +525,9 @@
                                                             <td class="text-success">
                                                                 {% if stats.tiene_datos %}
                                                                     {{ stats.maxima }}
+                                                                    {% if stats.alumno_maxima %}
+                                                                    <br><small>{{ stats.alumno_maxima.alumno.nombre|truncatechars:15 }}</small>
+                                                                    {% endif %}
                                                                 {% else %}
                                                                     <span class="sin-datos">-</span>
                                                                 {% endif %}
@@ -485,6 +535,9 @@
                                                             <td class="text-danger">
                                                                 {% if stats.tiene_datos %}
                                                                     {{ stats.minima }}
+                                                                    {% if stats.alumno_minima %}
+                                                                    <br><small>{{ stats.alumno_minima.alumno.nombre|truncatechars:15 }}</small>
+                                                                    {% endif %}
                                                                 {% else %}
                                                                     <span class="sin-datos">-</span>
                                                                 {% endif %}
@@ -533,6 +586,9 @@
                                                             <td class="text-success">
                                                                 {% if stats.tiene_datos %}
                                                                     {{ stats.maxima }}
+                                                                    {% if stats.alumno_maxima %}
+                                                                    <br><small>{{ stats.alumno_maxima.alumno.nombre|truncatechars:15 }}</small>
+                                                                    {% endif %}
                                                                 {% else %}
                                                                     <span class="sin-datos">-</span>
                                                                 {% endif %}
@@ -540,6 +596,9 @@
                                                             <td class="text-danger">
                                                                 {% if stats.tiene_datos %}
                                                                     {{ stats.minima }}
+                                                                    {% if stats.alumno_minima %}
+                                                                    <br><small>{{ stats.alumno_minima.alumno.nombre|truncatechars:15 }}</small>
+                                                                    {% endif %}
                                                                 {% else %}
                                                                     <span class="sin-datos">-</span>
                                                                 {% endif %}
@@ -629,7 +688,7 @@
                                 <div class="card-header bg-secondary text-white">
                                     <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Avance por Periodos</h5>
                                 </div>
-                                                                <div class="card-body">
+                                <div class="card-body">
                                     <div class="row">
                                         <!-- Gráfico de Parciales -->
                                         {% if estadisticas_avance.parciales.periodos %}
@@ -681,29 +740,59 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="grupo_id" value="{{ grupo_seleccionado.id }}">
                                         
-                                        <div class="row">
-                                            <div class="col-md-4">
-                                                <label class="form-label">Tipo de Examen:</label>
-                                                <select name="tipo_examen" class="form-select" required>
-                                                    <option value="A">Alta (Mejores notas)</option>
-                                                    <option value="P">Promedio</option>
-                                                    <option value="B">Baja (Peores notas)</option>
+                                        <div class="row g-3">
+                                            <!-- Período -->
+                                            <div class="col-md-3">
+                                                <label class="form-label">Período:</label>
+                                                <select name="periodo" class="form-select" required>
+                                                    <option value="">Seleccionar período</option>
+                                                    <option value="1">Período 1</option>
+                                                    <option value="2">Período 2</option>
+                                                    <option value="3">Período 3</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-6">
+                                            
+                                            <!-- Tipo de Evaluación -->
+                                            <div class="col-md-3">
+                                                <label class="form-label">Tipo de Evaluación:</label>
+                                                <select name="tipo_evaluacion" class="form-select" required>
+                                                    <option value="">Seleccionar tipo</option>
+                                                    <option value="P">Parcial</option>
+                                                    <option value="C">Continua</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- Tipo de Examen -->
+                                            <div class="col-md-3">
+                                                <label class="form-label">Tipo de Examen:</label>
+                                                <select name="tipo_examen" class="form-select" required>
+                                                    <option value="">Seleccionar tipo</option>
+                                                    <option value="A">Alta (Mejor nota)</option>
+                                                    <option value="B">Baja (Peor nota)</option>
+                                                    <option value="P">Promedio (Todos)</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- Archivos -->
+                                            <div class="col-md-3">
                                                 <label class="form-label">Archivos PDF:</label>
                                                 <input type="file" class="form-control" name="archivos_examen" 
                                                        accept=".pdf" multiple required>
+                                            </div>
+                                            
+                                            <!-- Información y botón -->
+                                            <div class="col-12">
                                                 <div class="form-text">
                                                     <strong>Formato requerido:</strong> Cualquier archivo que contenga el DNI (ej: 12345678_examen.pdf, examen_12345678.pdf, 12345678.pdf)<br>
-                                                    <strong>Se renombrará automáticamente a:</strong> DNI_CODIGOCURSO_TIPO.pdf<br>
-                                                    <strong>Ejemplo:</strong> 12345678_1701209_alta.pdf<br>
+                                                    <strong>Se renombrará automáticamente a:</strong> DNI_CODIGOCURSO_TIPO_PERIODO_TIPOEXAMEN.pdf<br>
+                                                    <strong>Ejemplo:</strong> 12345678_CS101_parcial1_alta.pdf<br>
                                                     <strong>Nota:</strong> El sistema buscará automáticamente el alumno en la base de datos usando el DNI
                                                 </div>
                                             </div>
-                                            <div class="col-md-2 d-flex align-items-end">
-                                                <button type="submit" name="subir_examenes" class="btn btn-success w-100">
-                                                    <i class="bi bi-upload"></i> Subir
+                                            
+                                            <div class="col-12">
+                                                <button type="submit" name="subir_examenes" class="btn btn-success">
+                                                    <i class="bi bi-upload"></i> Subir Exámenes
                                                 </button>
                                             </div>
                                         </div>
