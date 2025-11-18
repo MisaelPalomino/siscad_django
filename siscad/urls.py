@@ -99,4 +99,14 @@ urlpatterns = [
         views.revisar_estadisticas,
         name="revisar_estadisticas",
     ),
+    path(
+        "profesor/subir-silabo/",
+        views.subir_silabo,
+        name="subir_silabo",
+    ),
+    path(
+        "descargar-plantilla-silabo/<int:grupo_id>/",
+        views.descargar_plantilla_silabo_excel,
+        name="descargar_plantilla_silabo",
+    ),
 ]

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subir Silabo - Sistema Académico</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .card-silabo { transition: transform 0.2s; }
+        .card-silabo:hover { transform: translateY(-2px); }
+        .required-field::after { content: " *"; color: red; }
+        .silabo-subido { border-left: 4px solid #28a745; }
+        .silabo-pendiente { border-left: 4px solid #dc3545; }
+        .badge-temas { background-color: #17a2b8; }
+        .info-box { background-color: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .btn-download { display: none; } /* Ocultar inicialmente */
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="h3">
+                    <i class="bi bi-file-earmark-pdf"></i> Subir Silabo y Temas
+                </h1>
+                <p class="text-muted">Suba el silabo en PDF y los temas en Excel para sus cursos</p>
+            </div>
+        </div>
+
+        <!-- Mensajes -->
+        {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {% if message.tags == 'success' %}
+                    <i class="bi bi-check-circle-fill"></i>
+                {% elif message.tags == 'error' %}
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                {% else %}
+                    <i class="bi bi-info-circle-fill"></i>
+                {% endif %}
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card card-silabo">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-upload"></i> Subir Archivos</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" enctype="multipart/form-data" id="formSilabo">
+                            {% csrf_token %}
+                            
+                            <!-- Selección de Grupo -->
+                            <div class="mb-4">
+                                <label class="form-label required-field">Seleccionar Curso y Grupo</label>
+                                <select name="grupo_id" class="form-select" id="selectGrupo" required>
+                                    <option value="">Seleccione un curso</option>
+                                    {% for curso in cursos %}
+                                        <option value="{{ curso.grupo_id }}" data-codigo="{{ curso.codigo_curso }}" data-turno="{{ curso.turno }}">
+                                            {{ curso.nombre }} - {{ curso.tipo }} {{ curso.turno }} ({{ curso.codigo_curso }})
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    Seleccione el curso para el cual desea subir el silabo
+                                </div>
+                            </div>
+
+                            <!-- Archivo Silabo PDF -->
+                            <div class="mb-4">
+                                <label class="form-label required-field">Silabo (PDF)</label>
+                                <input type="file" class="form-control" name="archivo_silabo" 
+                                       accept=".pdf" required>
+                                <div class="form-text">
+                                    <strong>Formato automático:</strong> silabo-CODIGOCURSO-TURNO.pdf
+                                    <br><small>Ejemplo: silabo-1701209-A.pdf</small>
+                                </div>
+                            </div>
+
+                            <!-- Archivo Excel Temas -->
+                            <div class="mb-4">
+                                <label class="form-label">Temas del Silabo (Excel - Opcional)</label>
+                                <input type="file" class="form-control" name="archivo_excel" 
+                                       accept=".xlsx,.xls">
+                                <div class="form-text">
+                                    <strong>Formato requerido:</strong> Columnas "numero_tema" y "nombre_tema"
+                                    <br>
+                                    <!-- Botón de descarga que se muestra solo cuando se selecciona un grupo -->
+                                    <div id="downloadSection" class="mt-2">
+                                        <!-- SOLUCIÓN: Usar URL directa en lugar de template tag -->
+                                        <a href="#" class="btn btn-outline-primary btn-sm" id="btnDownloadTemplate">
+                                            <i class="bi bi-download"></i> Descargar Plantilla Excel
+                                        </a>
+                                        <small class="text-muted d-block mt-1">
+                                            Primero seleccione un curso para descargar la plantilla personalizada
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-upload"></i> Subir Archivos
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Información sobre Distribución -->
+                <div class="card card-silabo mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-lightbulb"></i> ¿Cómo funciona la distribución de fechas?</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-box">
+                                    <h6><i class="bi bi-check-circle text-success"></i> Más fechas que temas</h6>
+                                    <small class="text-muted">
+                                        <strong>Ejemplo:</strong> 3 temas y 6 fechas<br>
+                                        <strong>Resultado:</strong> Cada tema ocupará 2 fechas<br>
+                                        Tema 1 → Fecha 1, Fecha 2<br>
+                                        Tema 2 → Fecha 3, Fecha 4<br>
+                                        Tema 3 → Fecha 5, Fecha 6
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-box">
+                                    <h6><i class="bi bi-check-circle text-success"></i> Más temas que fechas</h6>
+                                    <small class="text-muted">
+                                        <strong>Ejemplo:</strong> 8 temas y 4 fechas<br>
+                                        <strong>Resultado:</strong> 2 temas por fecha<br>
+                                        Tema 1, Tema 2 → Fecha 1<br>
+                                        Tema 3, Tema 4 → Fecha 2<br>
+                                        Tema 5, Tema 6 → Fecha 3<br>
+                                        Tema 7, Tema 8 → Fecha 4
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-warning mt-3">
+                            <small>
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Nota:</strong> El sistema SIEMPRE utiliza TODAS las fechas disponibles de su horario de teoría.
+                                Los fines de semana se excluyen automáticamente.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- Cursos Disponibles -->
+                <div class="card card-silabo">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-journal-bookmark"></i> Mis Cursos</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">Cursos asignados para subir silabos:</p>
+                        
+                        {% for curso in cursos %}
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 border rounded {% if curso.silabo_existente %}silabo-subido{% else %}silabo-pendiente{% endif %}">
+                                <div class="flex-grow-1">
+                                    <strong class="small d-block">{{ curso.nombre }}</strong>
+                                    <span class="text-muted smaller">
+                                        {{ curso.tipo }} {{ curso.turno }} | {{ curso.codigo_curso }}
+                                    </span>
+                                    {% if curso.silabo_existente %}
+                                        <div class="mt-1">
+                                            <span class="badge bg-success">Silabo Subido</span>
+                                            {% if curso.temas_count > 0 %}
+                                                <span class="badge badge-temas">{{ curso.temas_count }} temas</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    {% if curso.silabo_existente %}
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                    {% else %}
+                                        <i class="bi bi-clock text-warning"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="text-center py-3">
+                                <i class="bi bi-folder-x display-4 text-muted"></i>
+                                <p class="text-muted mt-2">No tiene cursos asignados</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Instrucciones Rápidas -->
+                <div class="card card-silabo mt-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="bi bi-list-check"></i> Instrucciones Rápidas</h5>
+                    </div>
+                    <div class="card-body">
+                        <ol class="small">
+                            <li><strong>Seleccione el curso</strong> de la lista</li>
+                            <li><strong>Suba el silabo PDF</strong> (obligatorio)</li>
+                            <li><strong>Descargue la plantilla</strong> Excel (opcional)</li>
+                            <li><strong>Llene los temas</strong> en la plantilla</li>
+                            <li><strong>Suba el Excel</strong> con los temas (opcional)</li>
+                            <li><strong>El sistema distribuirá</strong> las fechas automáticamente</li>
+                        </ol>
+                        
+                        <div class="alert alert-info mt-3">
+                            <small>
+                                <i class="bi bi-lightning-charge"></i>
+                                <strong>Consejo:</strong> Puede subir el Excel de temas en cualquier momento, 
+                                incluso después de haber subido el PDF del silabo.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mostrar/ocultar botón de descarga según selección
+        document.getElementById('selectGrupo').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const downloadBtn = document.getElementById('btnDownloadTemplate');
+            const downloadSection = document.getElementById('downloadSection');
+            
+            if (selectedOption.value) {
+                // SOLUCIÓN: Usar un nombre de URL específico para silabos
+                const grupoId = selectedOption.value;
+                // CORREGIR: Quitar "/profesor/" de la URL
+                const url = `/siscad/descargar-plantilla-silabo/${grupoId}/`;                downloadBtn.href = url;
+                downloadSection.style.display = 'block';
+                
+                // Actualizar el texto informativo
+                const codigo = selectedOption.getAttribute('data-codigo');
+                const turno = selectedOption.getAttribute('data-turno');
+                downloadSection.querySelector('small').textContent = 
+                    `Plantilla personalizada para ${codigo} - Turno ${turno}`;
+            } else {
+                downloadSection.style.display = 'none';
+            }
+        });
+
+        // Validación de archivos antes de enviar
+        document.getElementById('formSilabo').addEventListener('submit', function(e) {
+            const archivoPdf = document.querySelector('input[name="archivo_silabo"]');
+            const archivoExcel = document.querySelector('input[name="archivo_excel"]');
+            
+            // Validar que el PDF sea realmente un PDF
+            if (archivoPdf.files.length > 0) {
+                const fileName = archivoPdf.files[0].name.toLowerCase();
+                if (!fileName.endsWith('.pdf')) {
+                    alert('El archivo del silabo debe ser un PDF');
+                    e.preventDefault();
+                    return;
+                }
+            }
+            
+            // Validar que el Excel sea realmente un Excel si se sube
+            if (archivoExcel.files.length > 0) {
+                const fileName = archivoExcel.files[0].name.toLowerCase();
+                if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+                    alert('El archivo de temas debe ser un Excel (.xlsx o .xls)');
+                    e.preventDefault();
+                    return;
+                }
+            }
+        });
+
+        // Inicializar: ocultar sección de descarga al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('downloadSection').style.display = 'none';
+        });
+    </script>
+</body>
+</html>

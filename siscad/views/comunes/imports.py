@@ -30,6 +30,8 @@ from ...models import (
     Reserva,
     Aula,
     Examen,
+    Silabo,
+    Tema,
 )
 
 import pandas as pd
