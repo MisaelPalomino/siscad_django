@@ -57,6 +57,11 @@ urlpatterns = [
         views.visualizar_asistencias_alumno,
         name="visualizar_asistencias_alumno",
     ),
+    path(
+        "alumno/visualizar-progreso/",
+        views.visualizar_progreso_estudiante,
+        name="visualizar_progreso_estudiante",
+    ),
     # === PROFESOR ===
     path(
         "profesor/visualizar-horario-profesor/",
