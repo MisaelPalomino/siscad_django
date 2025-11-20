@@ -5,3 +5,4 @@ from .revisar_estadisticas import *
 from .subir_silabo import *
 from .visualizar_asistencia_profesor import *
 from .visualizar_horario_profesor import *
+from .visualizar_avance import *

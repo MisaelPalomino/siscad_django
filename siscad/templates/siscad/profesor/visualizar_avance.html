@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Avance de Cursos</title>
+    <style>
+        :root {
+            --color-guinda: #8B0000;
+            --color-guinda-claro: #A52A2A;
+            --color-guinda-suave: #F8E8E8;
+            --color-blanco: #FFFFFF;
+            --color-gris: #F5F5F5;
+            --color-gris-oscuro: #333333;
+            --color-verde: #28a745;
+            --color-naranja: #ffc107;
+            --color-rojo: #dc3545;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--color-gris);
+        }
+        
+        .header {
+            background-color: var(--color-guinda);
+            color: var(--color-blanco);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .estadisticas-totales {
+            background-color: var(--color-blanco);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--color-guinda);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .estadisticas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .estadistica-item {
+            text-align: center;
+            padding: 15px;
+            background-color: var(--color-guinda-suave);
+            border-radius: 6px;
+        }
+        
+        .estadistica-valor {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--color-guinda);
+            margin-bottom: 5px;
+        }
+        
+        .estadistica-label {
+            font-size: 14px;
+            color: var(--color-gris-oscuro);
+        }
+        
+        .filtro-cursos {
+            background-color: var(--color-blanco);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--color-guinda);
+        }
+        
+        .filtro-cursos select {
+            padding: 8px 12px;
+            border: 2px solid var(--color-guinda);
+            border-radius: 4px;
+            background-color: var(--color-blanco);
+            color: var(--color-gris-oscuro);
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .curso-card {
+            background-color: var(--color-blanco);
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid var(--color-guinda);
+            display: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .curso-card.activo {
+            display: block;
+        }
+        
+        .curso-header {
+            color: var(--color-guinda);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--color-guinda-suave);
+        }
+        
+        .info-curso {
+            background-color: var(--color-guinda-suave);
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .estadisticas-curso {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .estadistica-curso-item {
+            background-color: var(--color-guinda-suave);
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .progress-container {
+            margin: 15px 0;
+        }
+        
+        .progress-bar {
+            background-color: var(--color-guinda-suave);
+            border-radius: 10px;
+            height: 25px;
+            margin: 10px 0;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            background-color: var(--color-guinda);
+            height: 100%;
+            border-radius: 10px;
+            text-align: center;
+            color: var(--color-blanco);
+            line-height: 25px;
+            font-weight: bold;
+            transition: width 0.5s ease;
+        }
+        
+        .progress-pendiente {
+            background-color: #FFE4E1;
+            height: 100%;
+            border-radius: 10px;
+            margin-left: 2px;
+        }
+        
+        .progress-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 12px;
+            color: var(--color-gris-oscuro);
+        }
+        
+        .tendencia-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .tendencia-adelantado {
+            background-color: var(--color-verde);
+            color: white;
+        }
+        
+        .tendencia-atrasado {
+            background-color: var(--color-rojo);
+            color: white;
+        }
+        
+        .tendencia-tiempo {
+            background-color: var(--color-naranja);
+            color: black;
+        }
+        
+        .estado-curso-badge {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        .estado-completado {
+            background-color: var(--color-verde);
+            color: white;
+        }
+        
+        .estado-progreso {
+            background-color: var(--color-naranja);
+            color: black;
+        }
+        
+        .estado-sin-iniciar {
+            background-color: var(--color-gris-oscuro);
+            color: white;
+        }
+        
+        .tema-lista {
+            margin-top: 20px;
+        }
+        
+        .tema-item {
+            padding: 10px;
+            border-bottom: 1px solid var(--color-guinda-suave);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .tema-item:hover {
+            background-color: var(--color-guinda-suave);
+        }
+        
+        .estado-badge {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .estado-hecho {
+            background-color: var(--color-guinda);
+            color: var(--color-blanco);
+        }
+        
+        .estado-nohecho {
+            background-color: #FFE4E1;
+            color: var(--color-guinda);
+            border: 1px solid var(--color-guinda);
+        }
+        
+        .sin-cursos {
+            text-align: center;
+            padding: 40px;
+            color: var(--color-guinda);
+            background-color: var(--color-blanco);
+            border-radius: 8px;
+            border: 2px dashed var(--color-guinda-suave);
+        }
+        
+        .fecha-info {
+            font-size: 12px;
+            color: var(--color-gris-oscuro);
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Avance de Cursos - {{ profesor.nombre }}</h1>
+        <p>Fecha actual: {{ fecha_actual }}</p>
+    </div>
+    
+    {% if not tiene_grupos %}
+        <div class="sin-cursos">
+            <h2>No tiene grupos asignados</h2>
+            <p>No tiene grupos asignados para visualizar el avance.</p>
+        </div>
+    {% else %}
+        <!-- Estadísticas Totales -->
+        <div class="estadisticas-totales">
+            <h2>📊 Resumen General</h2>
+            <div class="estadisticas-grid">
+                <div class="estadistica-item">
+                    <div class="estadistica-valor">{{ estadisticas_totales.total_cursos }}</div>
+                    <div class="estadistica-label">Total Cursos</div>
+                </div>
+                <div class="estadistica-item">
+                    <div class="estadistica-valor">{{ estadisticas_totales.porcentaje_total }}%</div>
+                    <div class="estadistica-label">Avance General</div>
+                </div>
+                <div class="estadistica-item">
+                    <div class="estadistica-valor">{{ estadisticas_totales.total_completados }}/{{ estadisticas_totales.total_temas }}</div>
+                    <div class="estadistica-label">Temas Completados</div>
+                </div>
+                <div class="estadistica-item">
+                    <div class="estadistica-valor">{{ estadisticas_totales.cursos_completados }}</div>
+                    <div class="estadistica-label">Cursos Completados</div>
+                </div>
+                <div class="estadistica-item">
+                    <div class="estadistica-valor">{{ estadisticas_totales.cursos_en_progreso }}</div>
+                    <div class="estadistica-label">Cursos en Progreso</div>
+                </div>
+                <div class="estadistica-item">
+                    <div class="estadistica-valor">{{ estadisticas_totales.cursos_sin_iniciar }}</div>
+                    <div class="estadistica-label">Cursos Sin Iniciar</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filtro-cursos">
+            <label for="selector-curso"><strong>Seleccionar Curso:</strong></label>
+            <select id="selector-curso">
+                <option value="">-- Seleccione un curso --</option>
+                {% for curso in avance_cursos %}
+                <option value="curso-{{ forloop.counter0 }}">
+                    {{ curso.curso }} - {{ curso.tipo }} 
+                    {% if curso.tipo == 'Teoría' %}(Turno {{ curso.turno }})
+                    {% elif curso.tipo == 'Práctica' %}(Turno {{ curso.turno }})
+                    {% elif curso.tipo == 'Laboratorio' %}(Grupo {{ curso.grupo_lab }})
+                    {% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        {% for curso in avance_cursos %}
+        <div class="curso-card" id="curso-{{ forloop.counter0 }}">
+            <div class="curso-header">
+                <h2>{{ curso.curso }} - {{ curso.tipo }}</h2>
+                <span class="estado-curso-badge 
+                    {% if curso.estado_curso == 'Completado' %}estado-completado
+                    {% elif curso.estado_curso == 'En progreso' %}estado-progreso
+                    {% else %}estado-sin-iniciar{% endif %}">
+                    {{ curso.estado_curso }}
+                </span>
+            </div>
+            
+            <div class="info-curso">
+                {% if curso.tipo == 'Teoría' %}
+                    <p><strong>Turno:</strong> {{ curso.turno }}</p>
+                {% elif curso.tipo == 'Práctica' %}
+                    <p><strong>Turno Práctica:</strong> {{ curso.turno }}</p>
+                    <p><strong>Turno Teoría Correspondiente:</strong> {{ curso.grupo_teoria_turno }}</p>
+                {% elif curso.tipo == 'Laboratorio' %}
+                    <p><strong>Grupo Laboratorio:</strong> {{ curso.grupo_lab }}</p>
+                    <p><strong>Turno Correspondiente:</strong> {{ curso.turno_lab }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Estadísticas del Curso -->
+            <div class="estadisticas-curso">
+                <div class="estadistica-curso-item">
+                    <div style="font-size: 20px; font-weight: bold; color: var(--color-guinda);">
+                        {{ curso.porcentaje_avance }}%
+                    </div>
+                    <div>Avance</div>
+                </div>
+                <div class="estadistica-curso-item">
+                    <div style="font-size: 20px; font-weight: bold; color: var(--color-rojo);">
+                        {{ curso.porcentaje_pendiente }}%
+                    </div>
+                    <div>Pendiente</div>
+                </div>
+                <div class="estadistica-curso-item">
+                    <div style="font-size: 20px; font-weight: bold; color: var(--color-gris-oscuro);">
+                        {{ curso.temas_completados }}/{{ curso.total_temas }}
+                    </div>
+                    <div>Temas Completados</div>
+                </div>
+                <div class="estadistica-curso-item">
+                    <div style="font-size: 20px; font-weight: bold; color: var(--color-naranja);">
+                        {{ curso.estadisticas_tiempo.dias_transcurridos }}/{{ curso.estadisticas_tiempo.dias_transcurridos|add:curso.estadisticas_tiempo.dias_restantes }}
+                    </div>
+                    <div>Días Transcurridos</div>
+                </div>
+            </div>
+            
+            <!-- Barra de Progreso Doble -->
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ curso.porcentaje_avance }}%;">
+                        {% if curso.porcentaje_avance >= 25 %}{{ curso.porcentaje_avance }}%{% endif %}
+                    </div>
+                </div>
+                <div class="progress-labels">
+                    <span>0%</span>
+                    <span>Avance: {{ curso.porcentaje_avance }}%</span>
+                    <span>100%</span>
+                </div>
+            </div>
+            
+            <!-- Información de Tiempo y Tendencia -->
+            <div class="info-curso">
+                <p><strong>Período:</strong> 
+                    {{ curso.estadisticas_tiempo.fecha_inicio }} al {{ curso.estadisticas_tiempo.fecha_fin }}
+                </p>
+                <p><strong>Tiempo Transcurrido:</strong> 
+                    {{ curso.estadisticas_tiempo.dias_transcurridos }} días 
+                    ({{ curso.estadisticas_tiempo.porcentaje_tiempo }}%)
+                    <span class="tendencia-badge 
+                        {% if curso.estadisticas_tiempo.tendencia == 'adelantado' %}tendencia-adelantado
+                        {% elif curso.estadisticas_tiempo.tendencia == 'atrasado' %}tendencia-atrasado
+                        {% else %}tendencia-tiempo{% endif %}">
+                        {% if curso.estadisticas_tiempo.tendencia == 'adelantado' %}✅ Adelantado
+                        {% elif curso.estadisticas_tiempo.tendencia == 'atrasado' %}⚠️ Atrasado
+                        {% else %}⏱️ En tiempo{% endif %}
+                    </span>
+                </p>
+                <p><strong>Tiempo Restante:</strong> {{ curso.estadisticas_tiempo.dias_restantes }} días</p>
+            </div>
+            
+            <!-- Lista de Temas -->
+            <div class="tema-lista">
+                <h3 style="color: var(--color-guinda);">📚 Temas del Curso:</h3>
+                {% for tema in curso.temas %}
+                <div class="tema-item">
+                    <div>
+                        <strong>{{ tema.nombre }}</strong>
+                        <div class="fecha-info">{{ tema.fecha }}</div>
+                    </div>
+                    <div>
+                        {% if tema.estado == 'H' %}
+                            <span class="estado-badge estado-hecho">HECHO</span>
+                        {% else %}
+                            <span class="estado-badge estado-nohecho">NO HECHO</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const selector = document.getElementById('selector-curso');
+            const cursos = document.querySelectorAll('.curso-card');
+            
+            selector.addEventListener('change', function() {
+                // Ocultar todos los cursos
+                cursos.forEach(curso => {
+                    curso.classList.remove('activo');
+                });
+                
+                // Mostrar el curso seleccionado
+                const cursoSeleccionado = document.getElementById(this.value);
+                if (cursoSeleccionado) {
+                    cursoSeleccionado.classList.add('activo');
+                }
+            });
+            
+            // Mostrar el primer curso por defecto
+            if (cursos.length > 0) {
+                cursos[0].classList.add('activo');
+                selector.value = 'curso-0';
+            }
+        });
+    </script>
+</body>
+</html>

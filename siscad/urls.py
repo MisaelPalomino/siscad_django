@@ -109,4 +109,9 @@ urlpatterns = [
         views.descargar_plantilla_silabo_excel,
         name="descargar_plantilla_silabo",
     ),
+    path(
+        "profesor/visualizar-avance/",
+        views.visualizar_avance,
+        name="visualizar_avance",
+    ),
 ]
