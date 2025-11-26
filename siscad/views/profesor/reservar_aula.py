@@ -9,7 +9,7 @@ def reservar_aula(request):
     profesor = get_object_or_404(Profesor, email=request.session["email"])
 
     # 🔹 Eliminar reservas pasadas automáticamente
-    Reserva.objects.filter(fecha__lt=date.today()).delete()
+    Reserva.objects.filter(profesor=profesor, fecha__lt=date.today()).delete()
 
     # 🔹 Contar reservas activas (de hoy o futuras)
     reservas_activas_count = Reserva.objects.filter(
@@ -17,9 +17,14 @@ def reservar_aula(request):
         fecha__gte=date.today(),
     ).count()
 
+    # 🔹 ACTUALIZAR cantidad_reservas (las que le quedan disponibles)
+    reservas_disponibles = 2 - reservas_activas_count
+    profesor.cantidad_reservas = max(0, reservas_disponibles)  # No menor a 0
+    profesor.save()
+
     # 🔹 Verificar si alcanzó el límite de reservas activas
-    if reservas_activas_count >= profesor.cantidad_reservas:
-        messages.error(request, "Ya has alcanzado el máximo de reservas permitidas.")
+    if reservas_activas_count >= 2:
+        messages.error(request, "Ya has alcanzado el máximo de 2 reservas permitidas.")
         return render(
             request,
             "siscad/profesor/reservar_aula.html",
@@ -29,6 +34,7 @@ def reservar_aula(request):
                 "reservas": Reserva.objects.filter(profesor=profesor),
                 "fecha_seleccionada": None,
                 "dia_letra": None,
+                "limite_alcanzado": True,
             },
         )
 
@@ -56,6 +62,18 @@ def reservar_aula(request):
                     "dia_letra": None,
                 },
             )
+
+        # ✅ VERIFICAR NUEVAMENTE EL LÍMITE
+        reservas_activas_count = Reserva.objects.filter(
+            profesor=profesor,
+            fecha__gte=date.today(),
+        ).count()
+
+        if reservas_activas_count >= 2:
+            messages.error(
+                request, "Ya has alcanzado el máximo de 2 reservas permitidas."
+            )
+            return redirect("reservar_aula")
 
         aula = get_object_or_404(Aula, id=aula_id)
         fecha_seleccionada = datetime.strptime(fecha, "%Y-%m-%d").date()
@@ -103,7 +121,7 @@ def reservar_aula(request):
             profesor=profesor,
             aula=aula,
             fecha=fecha_seleccionada,
-            curso=Curso.objects.first(),  # Puedes ajustarlo
+            curso=Curso.objects.first(),
         )
 
         # Asignar la hora
@@ -111,9 +129,18 @@ def reservar_aula(request):
         hora_obj.reserva = reserva
         hora_obj.save()
 
+        # ✅ ACTUALIZAR cantidad_reservas DESPUÉS DE CREAR RESERVA
+        reservas_activas_count = Reserva.objects.filter(
+            profesor=profesor,
+            fecha__gte=date.today(),
+        ).count()
+        reservas_disponibles = 2 - reservas_activas_count
+        profesor.cantidad_reservas = max(0, reservas_disponibles)
+        profesor.save()
+
         messages.success(
             request,
-            f" Reserva realizada con éxito para el aula {aula.nombre} el {fecha_seleccionada}.",
+            f"Reserva realizada con éxito para el aula {aula.nombre} el {fecha_seleccionada}.",
         )
         return redirect("reservar_aula")
 
@@ -146,6 +173,7 @@ def reservar_aula(request):
         "reservas": reservas_profesor,
         "fecha_seleccionada": fecha_seleccionada,
         "dia_letra": dia_letra,
+        "reservas_disponibles": profesor.cantidad_reservas,  # ✅ Para mostrar en template
     }
 
     return render(request, "siscad/profesor/reservar_aula.html", context)
@@ -161,20 +189,28 @@ def cancelar_reserva(request, reserva_id):
     if reserva.fecha > hoy or (
         reserva.fecha == hoy and all(h.hora_inicio > ahora for h in reserva.horas.all())
     ):
+        # Liberar las horas asociadas
         for h in reserva.horas.all():
             h.tipo = None
             h.reserva = None
             h.save()
 
+        # Eliminar la reserva
         reserva.delete()
-        profesor.cantidad_reservas += 1
+
+        reservas_activas_count = Reserva.objects.filter(
+            profesor=profesor,
+            fecha__gte=date.today(),
+        ).count()
+        reservas_disponibles = 2 - reservas_activas_count
+        profesor.cantidad_reservas = max(0, reservas_disponibles)
         profesor.save()
 
-        messages.success(request, " Reserva cancelada exitosamente.")
+        messages.success(request, "Reserva cancelada exitosamente.")
     else:
         messages.error(
             request,
-            " No puedes cancelar una reserva que ya ha comenzado o cuya fecha ha pasado.",
+            "No puedes cancelar una reserva que ya ha comenzado o cuya fecha ha pasado.",
         )
 
     return redirect("reservar_aula")
@@ -187,16 +223,35 @@ def ver_cancelar_reservas(request):
     hora_actual = ahora.time()
 
     # Eliminar reservas cuya fecha ya pasó
-    reservas_pasadas = Reserva.objects.filter(fecha__lt=fecha_actual)
+    reservas_pasadas = Reserva.objects.filter(profesor=profesor, fecha__lt=fecha_actual)
     for reserva in reservas_pasadas:
+        # Liberar las horas asociadas antes de eliminar
+        for h in reserva.horas.all():
+            h.tipo = None
+            h.reserva = None
+            h.save()
         reserva.delete()
 
     # Eliminar reservas del día actual que ya terminaron
-    reservas_hoy = Reserva.objects.filter(fecha=fecha_actual)
+    reservas_hoy = Reserva.objects.filter(profesor=profesor, fecha=fecha_actual)
     for reserva in reservas_hoy:
         horas_reserva = reserva.horas.all()
         if all(h.hora_fin < hora_actual for h in horas_reserva):
+            # Liberar las horas asociadas antes de eliminar
+            for h in reserva.horas.all():
+                h.tipo = None
+                h.reserva = None
+                h.save()
             reserva.delete()
+
+    # ✅ ACTUALIZAR cantidad_reservas DESPUÉS DE LIMPIAR RESERVAS
+    reservas_activas_count = Reserva.objects.filter(
+        profesor=profesor,
+        fecha__gte=date.today(),
+    ).count()
+    reservas_disponibles = 2 - reservas_activas_count
+    profesor.cantidad_reservas = max(0, reservas_disponibles)
+    profesor.save()
 
     # Mostrar solo reservas activas
     reservas = Reserva.objects.filter(profesor=profesor).order_by("-fecha")
