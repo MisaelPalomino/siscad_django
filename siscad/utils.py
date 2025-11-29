@@ -22,6 +22,7 @@ from .models import (
     MatriculaLaboratorio,
     AsistenciaAlumno,
     AsistenciaProfesor,
+    Administrador,
 )
 from pathlib import Path
 
@@ -1877,3 +1878,34 @@ def ejecutar_generacion_asistencias_profesores():
     print(f"\n Proceso completado. Asistencias creadas: {asistencias_creadas}")
 
     return asistencias_creadas
+
+
+def generar_administrador_unsa():
+    """Función para generar el administrador de UNSA"""
+
+    datos_admin = {
+        "email": "admin@unsa.edu.pe",
+        "nombre": "Administrador UNSA",
+        "dni": "12345678",
+    }
+
+    try:
+        # Verificar si ya existe
+        if Administrador.objects.filter(email=datos_admin["email"]).exists():
+            print("  El administrador UNSA ya existe")
+            return
+
+        # Crear administrador sin user
+        admin = Administrador.objects.create(
+            nombre=datos_admin["nombre"],
+            email=datos_admin["email"],
+            dni=datos_admin["dni"],
+        )
+
+        print(" Administrador UNSA creado exitosamente!")
+        print(f" Email: {datos_admin['email']}")
+        print(f" DNI: {datos_admin['dni']}")
+        print(" El administrador ha sido creado (sin user asociado)")
+
+    except Exception as e:
+        print(f" Error al crear administrador: {e}")

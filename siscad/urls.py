@@ -6,7 +6,7 @@ urlpatterns = [
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
     # === MENÚS PRINCIPALES ===
-    path("admin/menu/", views.inicio_admin, name="inicio_admin"),
+    path("admin/menu/", views.inicio_admin, name="inicio_administrador"),
     path("secretaria/menu/", views.inicio_secretaria, name="inicio_secretaria"),
     path("profesor/menu/", views.inicio_profesor, name="inicio_profesor"),
     path("alumno/menu/", views.inicio_alumno, name="inicio_alumno"),
@@ -118,5 +118,11 @@ urlpatterns = [
         "profesor/visualizar-avance/",
         views.visualizar_avance,
         name="visualizar_avance",
+    ),
+    # ============ Administrador =======================
+    path(
+        "admin/registrar-asistencia-alumnos/",
+        views.registrar_asistencia_alumnos_admin,
+        name="registrar_asistencia_alumnos",
     ),
 ]

@@ -154,7 +154,16 @@ def logout_view(request):
 
 
 def inicio_admin(request):
-    return render(request, "siscad/admin/menu.html")
+    rol = request.session.get("rol")
+
+    if rol != "Administrador":
+        request.session["rol"] = "Ninguno"
+        return redirect("login")
+
+    nombre = request.session.get("nombre")
+    return render(
+        request, "siscad/admin/menu.html", {"nombre": nombre, "rol": rol}
+    )
 
 
 def inicio_secretaria(request):
