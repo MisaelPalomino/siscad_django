@@ -125,4 +125,9 @@ urlpatterns = [
         views.registrar_asistencia_alumnos_admin,
         name="registrar_asistencia_alumnos",
     ),
+    path(
+        "admin/registrar-asistencia-profesor/",
+        views.registrar_asistencia_profesores_admin,
+        name="registrar_asistencia_profesor",
+    ),
 ]
