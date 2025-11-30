@@ -174,4 +174,30 @@ urlpatterns = [
         views.descargar_plantilla_excel_admin,
         name="descargar_plantilla_excel_admin",
     ),
+    path("admin/subir-silabo/", views.subir_silabo_admin, name="subir_silabo_admin"),
+    path(
+        "admin/descargar-plantilla-silabo/<int:grupo_id>/",
+        views.descargar_plantilla_silabo_excel_admin,
+        name="descargar_plantilla_silabo_admin",
+    ),
+    path(
+        "admin/visualizar-avance/",
+        views.visualizar_avance_admin,
+        name="visualizar_avance_admin",
+    ),
+    path(
+        "admin/listar-laboratorios/",
+        views.listar_grupos_laboratorio_admin,
+        name="listar_grupos_laboratorio_admin",
+    ),
+    path(
+        "admin/visualizar-horario-alumno/",
+        views.visualizar_horario_alumno_admin,
+        name="visualizar_horario_alumno_admin",
+    ),
+    path(
+        "admin/visualizar-horario-profesor/",
+        views.visualizar_horario_profesor_admin,
+        name="visualizar_horario_profesor_admin",
+    ),
 ]

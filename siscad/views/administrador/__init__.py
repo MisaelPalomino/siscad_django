@@ -8,3 +8,8 @@ from .matricula_laboratorio_admin import *
 from .ver_horarios_admin import *
 from .reporte_asistencia_alumno_admin import *
 from .ingresar_notas_admin import *
+from .subir_silabo_admin import *
+from .visualizar_avance_admin import *
+from .listar_grupos_laboratorio_admin import *
+from .visualizar_horario_alumno_admin import *
+from .visualizar_horario_profesor_admin import *

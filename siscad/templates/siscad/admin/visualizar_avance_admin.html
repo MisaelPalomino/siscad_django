@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Avance - Administrador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .progress {
+            height: 20px;
+        }
+        .badge-estado {
+            font-size: 0.8em;
+        }
+        .tema-hecho {
+            background-color: #d4edda !important;
+        }
+        .tema-pendiente {
+            background-color: #fff3cd !important;
+        }
+        .tema-futuro {
+            background-color: #f8f9fa !important;
+        }
+        .btn-estado {
+            width: 100px;
+        }
+        .estadistica-card {
+            border-left: 4px solid #007bff;
+        }
+        .tendencia-adelantado {
+            color: #28a745;
+        }
+        .tendencia-atrasado {
+            color: #dc3545;
+        }
+        .tendencia-en_tiempo {
+            color: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>Visualizar Avance - Administrador</h1>
+            <a href="{% url 'inicio_administrador' %}" class="btn btn-light btn-sm">Volver al Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Mensajes -->
+        {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Filtros de selección -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Seleccionar Profesor</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-6">
+                        <label for="profesor_id" class="form-label">Profesor:</label>
+                        <select class="form-select" id="profesor_id" name="profesor_id" onchange="this.form.submit()">
+                            <option value="">Seleccionar profesor</option>
+                            {% for profesor in profesores %}
+                                <option value="{{ profesor.id }}" {% if profesor.id == profesor_seleccionado.id %}selected{% endif %}>
+                                    {{ profesor.nombre }} ({{ profesor.email }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">Cargar Avance</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if profesor_seleccionado %}
+            <!-- Información del profesor -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Información del Profesor</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Nombre:</strong> {{ profesor_seleccionado.nombre }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Email:</strong> {{ profesor_seleccionado.email }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>DNI:</strong> {{ profesor_seleccionado.dni }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estadísticas Totales -->
+            {% if tiene_grupos %}
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card estadistica-card">
+                        <div class="card-body text-center">
+                            <h3 class="text-primary">{{ estadisticas_totales.total_cursos }}</h3>
+                            <p class="text-muted mb-0">Total Cursos</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card estadistica-card">
+                        <div class="card-body text-center">
+                            <h3 class="text-success">{{ estadisticas_totales.total_completados }}</h3>
+                            <p class="text-muted mb-0">Temas Completados</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card estadistica-card">
+                        <div class="card-body text-center">
+                            <h3 class="text-warning">{{ estadisticas_totales.total_pendientes }}</h3>
+                            <p class="text-muted mb-0">Temas Pendientes</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card estadistica-card">
+                        <div class="card-body text-center">
+                            <h3 class="text-info">{{ estadisticas_totales.porcentaje_total }}%</h3>
+                            <p class="text-muted mb-0">Avance General</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Cursos -->
+            {% for curso in avance_cursos %}
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center 
+                            {% if curso.estado_curso == 'Completado' %}bg-success
+                            {% elif curso.estado_curso == 'En progreso' %}bg-warning
+                            {% else %}bg-secondary{% endif %} text-white">
+                    <div>
+                        <h5 class="mb-0">
+                            {{ curso.curso }} - {{ curso.tipo }}
+                            {% if curso.turno %}(Turno {{ curso.turno }}){% endif %}
+                            {% if curso.grupo_lab %}(Lab {{ curso.grupo_lab }}){% endif %}
+                        </h5>
+                    </div>
+                    <div>
+                        <span class="badge bg-light text-dark">{{ curso.estado_curso }}</span>
+                        <span class="badge bg-info">{{ curso.porcentaje_avance }}%</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Barra de progreso -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Progreso del curso</span>
+                            <span>{{ curso.temas_completados }}/{{ curso.total_temas }} temas</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ curso.porcentaje_avance }}%"
+                                 aria-valuenow="{{ curso.porcentaje_avance }}" aria-valuemin="0" aria-valuemax="100">
+                                {{ curso.porcentaje_avance }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Estadísticas de tiempo -->
+                    {% if curso.estadisticas_tiempo.fecha_inicio %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <small class="text-muted">
+                                <strong>Período:</strong> 
+                                {{ curso.estadisticas_tiempo.fecha_inicio }} - {{ curso.estadisticas_tiempo.fecha_fin }}
+                            </small>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <small class="text-muted">
+                                <strong>Tendencia:</strong>
+                                <span class="tendencia-{{ curso.estadisticas_tiempo.tendencia }}">
+                                    {% if curso.estadisticas_tiempo.tendencia == 'adelantado' %}
+                                        <i class="bi bi-arrow-up-circle"></i> Adelantado
+                                    {% elif curso.estadisticas_tiempo.tendencia == 'atrasado' %}
+                                        <i class="bi bi-arrow-down-circle"></i> Atrasado
+                                    {% else %}
+                                        <i class="bi bi-check-circle"></i> En tiempo
+                                    {% endif %}
+                                </span>
+                            </small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Lista de temas -->
+                    <h6>Detalle de Temas:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Nombre del Tema</th>
+                                    <th>Fecha Programada</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tema in curso.temas %}
+                                <tr class="{% if tema.estado == 'H' %}tema-hecho{% elif tema.fecha > fecha_actual %}tema-futuro{% else %}tema-pendiente{% endif %}">
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ tema.nombre }}</td>
+                                    <td>
+                                        {{ tema.fecha }}
+                                        {% if tema.fecha < fecha_actual %}
+                                            <span class="badge bg-secondary badge-estado">Pasado</span>
+                                        {% elif tema.fecha == fecha_actual %}
+                                            <span class="badge bg-primary badge-estado">Hoy</span>
+                                        {% else %}
+                                            <span class="badge bg-success badge-estado">Futuro</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if tema.estado == 'H' %}
+                                            <span class="badge bg-success">HECHO</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">NO HECHO</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="tema_id" value="{{ tema.id }}">
+                                            {% if tema.estado == 'H' %}
+                                                <button type="submit" name="estado" value="N" 
+                                                        class="btn btn-warning btn-sm btn-estado"
+                                                        onclick="return confirm('¿Marcar como NO HECHO?')">
+                                                    <i class="bi bi-x-circle"></i> No Hecho
+                                                </button>
+                                            {% else %}
+                                                <button type="submit" name="estado" value="H" 
+                                                        class="btn btn-success btn-sm btn-estado"
+                                                        onclick="return confirm('¿Marcar como HECHO?')">
+                                                    <i class="bi bi-check-circle"></i> Hecho
+                                                </button>
+                                            {% endif %}
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% else %}
+            <!-- Mensaje cuando no hay grupos -->
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-journal-x display-1 text-muted"></i>
+                    <h3 class="text-muted mt-3">No hay cursos asignados</h3>
+                    <p class="text-muted">El profesor seleccionado no tiene grupos asignados</p>
+                </div>
+            </div>
+            {% endif %}
+
+        {% else %}
+            <!-- Mensaje cuando no hay profesor seleccionado -->
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-person-x display-1 text-muted"></i>
+                    <h3 class="text-muted mt-3">Seleccione un profesor</h3>
+                    <p class="text-muted">Elija un profesor de la lista para visualizar su avance</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
