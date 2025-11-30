@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservar Aula - Administrador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            border-color: #3498db;
+        }
+        .profesor-info {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>Reservar Aula - Administrador</h1>
+            <a href="{% url 'inicio_administrador' %}" class="btn btn-light btn-sm">Volver al Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Formulario de selección de profesor -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Seleccionar Profesor</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" id="formSeleccion">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="profesor_id" class="form-label"><strong>Profesor:</strong></label>
+                            <select name="profesor_id" id="profesor_id" class="form-control" required>
+                                <option value="">-- Seleccione un profesor --</option>
+                                {% for profesor in profesores %}
+                                <option value="{{ profesor.id }}" 
+                                        {% if profesor_seleccionado and profesor_seleccionado.id == profesor.id %}selected{% endif %}>
+                                    {{ profesor.nombre }} - {{ profesor.email }}
+                                    {% if profesor.cantidad_reservas is not None %}
+                                    (Reservas disponibles: {{ profesor.cantidad_reservas }})
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="aula_id" class="form-label"><strong>Aula:</strong></label>
+                            <select name="aula_id" id="aula_id" class="form-control" required>
+                                <option value="">-- Seleccione un aula --</option>
+                                {% for aula in aulas %}
+                                <option value="{{ aula.id }}">{{ aula.nombre }} - {{ aula.tipo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="fecha" class="form-label"><strong>Fecha:</strong></label>
+                            <input type="date" name="fecha" id="fecha" class="form-control" required
+                                   min="{{ today|date:'Y-m-d' }}"
+                                   value="{{ fecha_seleccionada|date:'Y-m-d' }}">
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">Buscar Horas Disponibles</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Información del Profesor Seleccionado -->
+        {% if profesor_seleccionado %}
+        <div class="profesor-info">
+            <h5>Profesor: {{ profesor_seleccionado.nombre }}</h5>
+            <p class="mb-0">
+                <strong>Email:</strong> {{ profesor_seleccionado.email }} | 
+                <strong>DNI:</strong> {{ profesor_seleccionado.dni }} |
+                <strong>Reservas disponibles:</strong> {{ profesor_seleccionado.cantidad_reservas }}
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Horas Disponibles -->
+        {% if horas %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Horas Disponibles - {{ fecha_seleccionada|date:"d/m/Y" }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="profesor_id" value="{{ profesor_seleccionado.id }}">
+                    <input type="hidden" name="aula_id" value="{{ request.GET.aula_id }}">
+                    <input type="hidden" name="fecha" value="{{ fecha_seleccionada|date:'Y-m-d' }}">
+                    
+                    <div class="row">
+                        {% for hora in horas %}
+                        <div class="col-md-3 mb-3">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6>{{ hora.hora_inicio|time:'H:i' }} - {{ hora.hora_fin|time:'H:i' }}</h6>
+                                    <button type="submit" name="hora_inicio" value="{{ hora.hora_inicio|time:'H:i:s' }}" 
+                                            class="btn btn-success btn-sm">
+                                        Reservar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% elif profesor_seleccionado and fecha_seleccionada %}
+        <div class="alert alert-info text-center">
+            <h5>No hay horas disponibles</h5>
+            <p>No se encontraron horas disponibles para el aula seleccionada en la fecha {{ fecha_seleccionada|date:"d/m/Y" }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-submit form cuando todos los campos estén llenos
+            const form = document.getElementById('formSeleccion');
+            const inputs = form.querySelectorAll('select, input');
+            
+            inputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    const allFilled = Array.from(inputs).every(input => input.value !== '');
+                    if (allFilled) {
+                        form.submit();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

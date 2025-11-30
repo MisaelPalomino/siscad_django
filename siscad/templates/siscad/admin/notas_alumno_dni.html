@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notas por DNI - Administrador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        .table th {
+            background-color: #34495e;
+            color: white;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            border-color: #3498db;
+        }
+        .btn-excel {
+            background-color: #1d6f42;
+            border-color: #1d6f42;
+        }
+        .alumno-info {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+        .curso-card {
+            border-left: 4px solid #3498db;
+            margin-bottom: 1.5rem;
+        }
+        .badge-aprobado { background-color: #27ae60; }
+        .badge-recuperacion { background-color: #f39c12; }
+        .badge-desaprobado { background-color: #e74c3c; }
+        .badge-sin-notas { background-color: #95a5a6; }
+        .nota-table th {
+            background-color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>Notas de Alumno por DNI</h1>
+            <a href="{% url 'inicio_administrador' %}" class="btn btn-light btn-sm">Volver al Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Formulario de búsqueda -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Buscar Alumno por DNI</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-8">
+                            <label for="dni" class="form-label"><strong>DNI del Alumno:</strong></label>
+                            <input type="text" name="dni" id="dni" class="form-control" 
+                                   placeholder="Ingrese el DNI del alumno" required
+                                   value="{{ request.POST.dni }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <button type="submit" class="btn btn-primary w-100">Buscar Alumno</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Mensajes de error -->
+        {% if mensaje %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ mensaje }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <!-- Información del Alumno -->
+        {% if alumno_encontrado %}
+        <div class="alumno-info">
+            <div class="row">
+                <div class="col-md-8">
+                    <h5>Alumno: {{ alumno_encontrado.nombre }}</h5>
+                    <p class="mb-0">
+                        <strong>DNI:</strong> {{ alumno_encontrado.dni }} | 
+                        <strong>Email:</strong> {{ alumno_encontrado.email }} |
+                        <strong>CUI:</strong> {{ alumno_encontrado.cui }} |
+                        <strong>Semestre:</strong> {{ alumno_encontrado.semestre_asignado }}
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    {% if notas_data %}
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="dni" value="{{ alumno_encontrado.dni }}">
+                        <input type="hidden" name="descargar_excel" value="1">
+                        <button type="submit" class="btn btn-excel">
+                            📊 Descargar Excel
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Estadísticas Generales -->
+        {% if estadisticas %}
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3>{{ estadisticas.total_cursos }}</h3>
+                        <p class="mb-0">Total Cursos</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-success">{{ estadisticas.cursos_con_notas }}</h3>
+                        <p class="mb-0">Cursos con Notas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-success">{{ estadisticas.cursos_aprobados }}</h3>
+                        <p class="mb-0">Cursos Aprobados</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-primary">{{ estadisticas.promedio_general }}</h3>
+                        <p class="mb-0">Promedio General</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Notas por Curso -->
+        {% if notas_data %}
+            {% for curso_data in notas_data %}
+            <div class="card curso-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        {{ curso_data.curso.nombre }} - Semestre {{ curso_data.curso.semestre }}
+                    </h5>
+                    <div>
+                        <span class="badge 
+                            {% if curso_data.estado == 'Aprobado' %}badge-aprobado
+                            {% elif curso_data.estado == 'En recuperación' %}badge-recuperacion
+                            {% elif curso_data.estado == 'Desaprobado' %}badge-desaprobado
+                            {% else %}badge-sin-notas{% endif %}">
+                            {{ curso_data.estado }}
+                        </span>
+                        {% if curso_data.promedio != -1 %}
+                        <span class="badge bg-primary ms-2">Promedio: {{ curso_data.promedio }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Notas Parciales -->
+                    {% if curso_data.notas_parciales %}
+                    <h6>Notas Parciales:</h6>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm nota-table">
+                            <thead>
+                                <tr>
+                                    <th>Periodo</th>
+                                    <th>Nota</th>
+                                    <th>Peso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for nota in curso_data.notas_parciales %}
+                                <tr>
+                                    <td>{{ nota.periodo }}</td>
+                                    <td>
+                                        {% if nota.valor != -1 %}
+                                        <strong>{{ nota.valor }}</strong>
+                                        {% else %}
+                                        <span class="text-muted">No registrada</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ nota.peso }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    <!-- Notas Continuas -->
+                    {% if curso_data.notas_continuas %}
+                    <h6>Notas Continuas:</h6>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm nota-table">
+                            <thead>
+                                <tr>
+                                    <th>Periodo</th>
+                                    <th>Nota</th>
+                                    <th>Peso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for nota in curso_data.notas_continuas %}
+                                <tr>
+                                    <td>{{ nota.periodo }}</td>
+                                    <td>
+                                        {% if nota.valor != -1 %}
+                                        <strong>{{ nota.valor }}</strong>
+                                        {% else %}
+                                        <span class="text-muted">No registrada</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ nota.peso }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    <!-- Notas Sustitutorio -->
+                    {% if curso_data.notas_sustitutorio %}
+                    <h6>Notas Sustitutorio:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm nota-table">
+                            <thead>
+                                <tr>
+                                    <th>Periodo</th>
+                                    <th>Nota</th>
+                                    <th>Peso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for nota in curso_data.notas_sustitutorio %}
+                                <tr>
+                                    <td>{{ nota.periodo }}</td>
+                                    <td>
+                                        {% if nota.valor != -1 %}
+                                        <strong>{{ nota.valor }}</strong>
+                                        {% else %}
+                                        <span class="text-muted">No registrada</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ nota.peso }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    {% if not curso_data.notas_parciales and not curso_data.notas_continuas and not curso_data.notas_sustitutorio %}
+                    <p class="text-muted text-center mb-0">No hay notas registradas para este curso.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% elif alumno_encontrado %}
+        <div class="alert alert-info text-center">
+            <h5>No hay notas registradas</h5>
+            <p>El alumno no tiene notas registradas en el sistema.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <footer class="mt-5 py-3 bg-light">
+        <div class="container text-center">
+            <small class="text-muted">Sistema de Gestión Académica - Administrador</small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-focus en el campo DNI
+        document.addEventListener('DOMContentLoaded', function() {
+            var dniInput = document.getElementById('dni');
+            if (dniInput) {
+                dniInput.focus();
+            }
+        });
+    </script>
+</body>
+</html>

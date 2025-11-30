@@ -130,4 +130,30 @@ urlpatterns = [
         views.registrar_asistencia_profesores_admin,
         name="registrar_asistencia_profesor",
     ),
+    path(
+        "admin/visualizar-matriculados/",
+        views.visualizar_matriculados_admin,
+        name="visualizar_matriculados_admin",
+    ),
+    path(
+        "admin/estadisticas-curso/",
+        views.estadisticas_curso_admin,
+        name="estadisticas_curso_admin",
+    ),
+    path(
+        "admin/notas-alumno-dni/",
+        views.notas_alumno_dni_admin,
+        name="notas_alumno_dni_admin",
+    ),
+    path("admin/reservar-aula/", views.reservar_aula_admin, name="reservar_aula_admin"),
+    path(
+        "admin/cancelar-reserva/",
+        views.cancelar_reserva_admin,
+        name="cancelar_reserva_admin",
+    ),
+    path(
+        "admin/matricula-laboratorio/",
+        views.matricula_laboratorio_admin,
+        name="matricula_laboratorio_admin",
+    ),
 ]

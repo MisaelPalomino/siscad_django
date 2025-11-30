@@ -8,6 +8,7 @@ from django.db.models import Q, Count
 from ...forms import UploadExcelForm
 from django.db.models import Avg, Max, Min, Count, Q
 import io
+import statistics
 
 
 import openpyxl
