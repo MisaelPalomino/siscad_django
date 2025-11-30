@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Asistencia - Administrador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stats-card {
+            border-left: 4px solid #007bff;
+        }
+        .presente {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        .falta {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        .table th {
+            background-color: #343a40;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>Reporte de Asistencia de Alumno - Administrador</h1>
+            <a href="{% url 'inicio_administrador' %}" class="btn btn-light btn-sm">Volver al Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Formulario de búsqueda -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Buscar Alumno por DNI</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="dni_alumno" class="form-label">DNI del Alumno</label>
+                        <input type="text" class="form-control" id="dni_alumno" name="dni_alumno" 
+                               value="{{ dni_alumno }}" placeholder="Ingrese DNI" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="curso_id" class="form-label">Filtrar por Curso</label>
+                        <select class="form-select" id="curso_id" name="curso_id">
+                            <option value="">Todos los cursos</option>
+                            {% for curso in cursos_alumno %}
+                                <option value="{{ curso.id }}" {% if curso_id == curso.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ curso.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
+                        <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" 
+                               value="{{ fecha_inicio }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="fecha_fin" class="form-label">Fecha Fin</label>
+                        <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" 
+                               value="{{ fecha_fin }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">Buscar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if alumno_seleccionado %}
+            <!-- Información del alumno -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Información del Alumno</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Nombre:</strong> {{ alumno_seleccionado.nombre }}
+                        </div>
+                        <div class="col-md-2">
+                            <strong>DNI:</strong> {{ alumno_seleccionado.dni }}
+                        </div>
+                        <div class="col-md-2">
+                            <strong>CUI:</strong> {{ alumno_seleccionado.cui }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Email:</strong> {{ alumno_seleccionado.email }}
+                        </div>
+                        <div class="col-md-2">
+                            <strong>Semestre:</strong> {{ alumno_seleccionado.semestre_asignado|default:"No asignado" }}
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <strong>Cursos matriculados:</strong>
+                            {% for curso in cursos_alumno %}
+                                <span class="badge bg-secondary">{{ curso.nombre }}</span>
+                            {% empty %}
+                                <span class="text-muted">No tiene cursos matriculados</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estadísticas -->
+            {% if estadisticas %}
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">{{ estadisticas.total }}</h5>
+                            <p class="card-text">Total Registros</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-success">{{ estadisticas.presentes }}</h5>
+                            <p class="card-text">Asistencias</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-danger">{{ estadisticas.faltas }}</h5>
+                            <p class="card-text">Faltas</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-primary">{{ estadisticas.porcentaje_asistencia|floatformat:2 }}%</h5>
+                            <p class="card-text">% Asistencia</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón descargar Excel -->
+            <div class="mb-4">
+                <form method="get">
+                    <input type="hidden" name="dni_alumno" value="{{ dni_alumno }}">
+                    <input type="hidden" name="curso_id" value="{{ curso_id }}">
+                    <input type="hidden" name="fecha_inicio" value="{{ fecha_inicio }}">
+                    <input type="hidden" name="fecha_fin" value="{{ fecha_fin }}">
+                    <input type="hidden" name="descargar_excel" value="1">
+                    <button type="submit" class="btn btn-success">
+                        📊 Descargar Reporte Excel
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Tabla de asistencias -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Detalle de Asistencias</h5>
+                </div>
+                <div class="card-body">
+                    {% if asistencias %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Curso</th>
+                                    <th>Tipo Sesión</th>
+                                    <th>Estado</th>
+                                    <th>Día</th>
+                                    <th>Horario</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for asistencia in asistencias %}
+                                <tr class="{% if asistencia.estado == 'P' %}table-success{% else %}table-danger{% endif %}">
+                                    <td>{{ asistencia.fecha|date:"d/m/Y" }}</td>
+                                    <td>
+                                        {% if asistencia.hora.grupo_teoria %}
+                                            {{ asistencia.hora.grupo_teoria.curso.nombre }}
+                                        {% elif asistencia.hora.grupo_practica %}
+                                            {{ asistencia.hora.grupo_practica.grupo_teoria.curso.nombre }}
+                                        {% elif asistencia.hora.grupo_laboratorio %}
+                                            {{ asistencia.hora.grupo_laboratorio.grupo_teoria.curso.nombre }}
+                                        {% else %}
+                                            No especificado
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if asistencia.hora.grupo_teoria %}Teoría
+                                        {% elif asistencia.hora.grupo_practica %}Práctica
+                                        {% elif asistencia.hora.grupo_laboratorio %}Laboratorio
+                                        {% else %}No especificado{% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if asistencia.estado == 'P' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {% if asistencia.estado == 'P' %}Presente{% else %}Falta{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ asistencia.hora.get_dia_display }}</td>
+                                    <td>{{ asistencia.hora.hora_inicio|time:"H:i" }} - {{ asistencia.hora.hora_fin|time:"H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        No se encontraron registros de asistencia para los filtros seleccionados.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% elif dni_alumno %}
+            <div class="alert alert-warning">
+                No se encontró ningún alumno con el DNI: <strong>{{ dni_alumno }}</strong>
+            </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

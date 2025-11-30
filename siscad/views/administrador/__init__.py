@@ -4,4 +4,7 @@ from .visualizar_matriculados_admin import *
 from .estadisticas_curso_admin import *
 from .notas_alumnos_admin import *
 from .reservas_aulas_admin import *
-from .matricula_laboratorio_admin import*
+from .matricula_laboratorio_admin import *
+from .ver_horarios_admin import *
+from .reporte_asistencia_alumno_admin import *
+from .ingresar_notas_admin import *

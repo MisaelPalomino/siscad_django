@@ -156,4 +156,22 @@ urlpatterns = [
         views.matricula_laboratorio_admin,
         name="matricula_laboratorio_admin",
     ),
+    path(
+        "admin/visualizar-horarios-aulas/",
+        views.visualizar_horarios_aulas_admin,
+        name="visualizar_horarios_aulas_admin",
+    ),
+    path(
+        "admin/reporte-asistencia-alumno/",
+        views.reporte_asistencia_alumno_admin,
+        name="reporte_asistencia_alumno_admin",
+    ),
+    path(
+        "admin/ingresar-notas/", views.ingresar_notas_admin, name="ingresar_notas_admin"
+    ),
+    path(
+        "admin/descargar-plantilla-excel/<int:grupo_id>/",
+        views.descargar_plantilla_excel_admin,
+        name="descargar_plantilla_excel_admin",
+    ),
 ]
