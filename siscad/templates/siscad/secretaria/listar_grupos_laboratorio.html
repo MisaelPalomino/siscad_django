@@ -1,82 +1,750 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Laboratorios Disponibles</title>
+    <title>Dashboard - Laboratorios Disponibles</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        table, th, td {
-            border: 1px solid black;
+        :root {
+            --color-guinda: #800020;
+            --color-guinda-claro: #a04060;
+            --color-guinda-suave: #f5e8ed;
+            --color-gris: #f8f9fa;
+            --color-gris-oscuro: #6c757d;
+            --color-blanco: #ffffff;
+            --color-sombra: rgba(128, 0, 32, 0.1);
+            --color-borde: #e0a0b0;
+            --color-exito: #28a745;
+            --color-error: #dc3545;
+            --color-advertencia: #ffc107;
+            --color-info: #17a2b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--color-gris);
+            color: #333;
+            line-height: 1.6;
+            padding-bottom: 30px;
+        }
+
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Header y Navegación */
+        .header {
+            background-color: var(--color-guinda);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-nav {
+            background-color: var(--color-guinda-claro);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-nav:hover {
+            background-color: white;
+            color: var(--color-guinda);
+            transform: translateY(-2px);
+        }
+
+        /* Contenido principal */
+        .main-content {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .card {
+            background-color: var(--color-blanco);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px var(--color-sombra);
+            padding: 25px;
+            margin-bottom: 30px;
+            border-top: 4px solid var(--color-guinda);
+        }
+
+        .card h2 {
+            color: var(--color-guinda);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--color-borde);
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Mensajes */
+        .messages-container {
+            margin-bottom: 25px;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-left: 4px solid var(--color-exito);
+        }
+
+        .message-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid var(--color-error);
+        }
+
+        .message-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border-left: 4px solid var(--color-advertencia);
+        }
+
+        .message-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid var(--color-info);
+        }
+
+        /* Botones de acción */
+        .acciones-superiores {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .btn-excel {
+            background-color: var(--color-exito);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-excel:hover {
+            background-color: #218838;
+        }
+
+        .resumen-laboratorios {
+            background-color: var(--color-guinda-suave);
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .resumen-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .resumen-valor {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--color-guinda);
+        }
+
+        .resumen-etiqueta {
+            font-size: 0.9rem;
+            color: var(--color-gris-oscuro);
+        }
+
+        /* Tabla de laboratorios */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        table {
+            width: 100%;
             border-collapse: collapse;
-            padding: 5px;
+            background-color: var(--color-blanco);
         }
-        input[type="number"] {
-            width: 60px;
+
+        th {
+            background-color: var(--color-guinda);
+            color: white;
+            font-weight: 600;
+            text-align: left;
+            padding: 15px;
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
         }
-        button {
-            padding: 4px 8px;
-            margin: 2px;
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--color-borde);
+            vertical-align: middle;
         }
-        .mensaje {
-            color: green;
+
+        tr {
+            transition: background-color 0.2s;
         }
-        .error {
-            color: red;
+
+        tr:hover {
+            background-color: var(--color-guinda-suave);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .empty-row td {
+            text-align: center;
+            color: var(--color-gris-oscuro);
+            padding: 30px;
+            font-style: italic;
+        }
+
+        /* Estilos específicos para columnas */
+        .col-curso {
+            font-weight: 500;
+            color: var(--color-guinda);
+        }
+
+        .col-profesor {
+            font-style: italic;
+        }
+
+        .col-cupos {
+            text-align: center;
+        }
+
+        .cupo-bajo {
+            color: var(--color-error);
+            font-weight: 600;
+        }
+
+        .cupo-medio {
+            color: var(--color-advertencia);
+            font-weight: 600;
+        }
+
+        .cupo-alto {
+            color: var(--color-exito);
+            font-weight: 600;
+        }
+
+        /* Formulario de actualización de cupos */
+        .form-cupos {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-cupos {
+            width: 80px;
+            padding: 8px 10px;
+            border: 1px solid var(--color-borde);
+            border-radius: 4px;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: border-color 0.3s;
+        }
+
+        .input-cupos:focus {
+            outline: none;
+            border-color: var(--color-guinda);
+            box-shadow: 0 0 0 2px var(--color-sombra);
+        }
+
+        .btn-actualizar {
+            background-color: var(--color-guinda);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .btn-actualizar:hover {
+            background-color: var(--color-guinda-claro);
+        }
+
+        /* Estado del laboratorio */
+        .estado-laboratorio {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .estado-activo {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .estado-sin-profesor {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        /* Botón de volver al menú en la parte superior */
+        .back-to-menu {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--color-guinda);
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.3s;
+        }
+
+        .back-to-menu:hover {
+            color: var(--color-guinda-claro);
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--color-gris-oscuro);
+            font-size: 0.9rem;
+            margin-top: auto;
+            border-top: 1px solid var(--color-borde);
+        }
+
+        /* Responsividad */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .nav-menu {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .main-content {
+                padding: 20px 15px;
+            }
+            
+            .card {
+                padding: 20px 15px;
+            }
+            
+            .acciones-superiores {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .resumen-laboratorios {
+                justify-content: center;
+            }
+            
+            .form-cupos {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            
+            .input-cupos {
+                width: 100%;
+            }
+            
+            .btn-actualizar {
+                width: 100%;
+            }
+            
+            th, td {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+            
+            th:nth-child(5),
+            th:nth-child(6),
+            td:nth-child(5),
+            td:nth-child(6) {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .btn-nav {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .resumen-valor {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Animación para actualización de cupos */
+        @keyframes highlight {
+            0% { background-color: var(--color-guinda-suave); }
+            50% { background-color: #e8f5e9; }
+            100% { background-color: var(--color-guinda-suave); }
+        }
+
+        .highlight {
+            animation: highlight 1.5s ease;
         }
     </style>
+    <script>
+        // Función para resaltar la fila actualizada
+        function highlightRow(rowId) {
+            var row = document.getElementById('lab-row-' + rowId);
+            if (row) {
+                row.classList.add('highlight');
+                setTimeout(function() {
+                    row.classList.remove('highlight');
+                }, 1500);
+            }
+        }
+        
+        // Función para validar el número de cupos antes de enviar
+        function validarCupos(input) {
+            var valor = parseInt(input.value);
+            if (valor < 0) {
+                input.value = 0;
+                return false;
+            }
+            return true;
+        }
+        
+        // Mostrar confirmación al actualizar cupos
+        function confirmarActualizacion(form) {
+            var cupos = form.querySelector('input[name="cupos"]').value;
+            var labId = form.querySelector('input[name="lab_id"]').value;
+            
+            if (confirm('¿Está seguro de actualizar los cupos a ' + cupos + '?')) {
+                // Agregar clase de carga al botón
+                var btn = form.querySelector('button[name="actualizar_cupos"]');
+                var originalText = btn.innerHTML;
+                btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid #fff;border-radius:50%;border-top-color:transparent;animation:spin 1s linear infinite"></span> Actualizando...';
+                btn.disabled = true;
+                
+                // Crear animación de carga
+                var style = document.createElement('style');
+                style.innerHTML = '@keyframes spin { to { transform: rotate(360deg); } }';
+                document.head.appendChild(style);
+                
+                // Enviar formulario después de un breve retraso para mostrar la animación
+                setTimeout(function() {
+                    form.submit();
+                }, 500);
+                
+                return true;
+            }
+            return false;
+        }
+        
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Agregar IDs a las filas para la animación
+            var rows = document.querySelectorAll('tbody tr');
+            rows.forEach(function(row, index) {
+                var labId = row.querySelector('input[name="lab_id"]');
+                if (labId) {
+                    row.id = 'lab-row-' + labId.value;
+                }
+            });
+            
+            // Agregar clases de cupos según el valor
+            var cupoInputs = document.querySelectorAll('.input-cupos');
+            cupoInputs.forEach(function(input) {
+                var valor = parseInt(input.value);
+                var parentTd = input.closest('td');
+                
+                if (valor <= 5) {
+                    parentTd.classList.add('cupo-bajo');
+                } else if (valor <= 15) {
+                    parentTd.classList.add('cupo-medio');
+                } else {
+                    parentTd.classList.add('cupo-alto');
+                }
+                
+                // Actualizar clase cuando cambia el valor
+                input.addEventListener('change', function() {
+                    parentTd.className = 'col-cupos';
+                    var nuevoValor = parseInt(this.value);
+                    
+                    if (nuevoValor <= 5) {
+                        parentTd.classList.add('cupo-bajo');
+                    } else if (nuevoValor <= 15) {
+                        parentTd.classList.add('cupo-medio');
+                    } else {
+                        parentTd.classList.add('cupo-alto');
+                    }
+                });
+            });
+            
+            // Verificar si hay parámetros de éxito en la URL
+            var urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('actualizado')) {
+                var labId = urlParams.get('actualizado');
+                highlightRow(labId);
+            }
+        });
+    </script>
 </head>
 <body>
-    <h1>Laboratorios Disponibles</h1>
+    <div class="dashboard-container">
+        <header class="header">
+            <h1>Dashboard de Gestión de Laboratorios</h1>
+            <div class="nav-menu">
+                <a href="{% url 'inicio_secretaria' %}" class="btn-nav">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146zM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v4H2.5z"/>
+                    </svg>
+                    Volver al Menú
+                </a>
+            </div>
+        </header>
 
-    {% if messages %}
-        <ul>
-        {% for message in messages %}
-            <li class="{% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</li>
-        {% endfor %}
-        </ul>
-    {% endif %}
+        <main class="main-content">
+            <a href="{% url 'inicio_secretaria' %}" class="back-to-menu">
+                <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                </svg>
+                Volver al Menú Principal
+            </a>
+            
+            <div class="card">
+                <h2>
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M1 0h14v16H1V0zm1 1v14h12V1H2zm3.5 3a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h5a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-5zM4 4.5A1.5 1.5 0 0 1 5.5 3h5A1.5 1.5 0 0 1 12 4.5v3a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 4 7.5v-3z"/>
+                    </svg>
+                    Laboratorios Disponibles
+                </h2>
+                
+                {% if messages %}
+                <div class="messages-container">
+                    {% for message in messages %}
+                    <div class="message message-{% if message.tags %}{{ message.tags }}{% else %}info{% endif %}">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                            {% if message.tags == "success" %}
+                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                            {% elif message.tags == "error" %}
+                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z"/>
+                            {% elif message.tags == "warning" %}
+                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 4a.905.905 0 0 0-.9.995l.35 3.507a.552.552 0 0 0 1.1 0l.35-3.507A.905.905 0 0 0 8 4zm.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                            {% else %}
+                            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+                            {% endif %}
+                        </svg>
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                                        <p> Alguien le ha dicho que se parece a </p>
+                        <p> Denzel Washington </p>
+                <div class="acciones-superiores">
+                    <div class="resumen-laboratorios">
+                        <div class="resumen-item">
+                            <span class="resumen-valor">{{ laboratorios|length }}</span>
+                            <span class="resumen-etiqueta">Total Laboratorios</span>
+                        </div>
 
-    <!-- Botón para descargar Excel -->
-    <form method="POST">
-        {% csrf_token %}
-        <button type="submit" name="descargar_excel">Descargar Excel</button>
-    </form>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Curso</th>
-                <th>Grupo Teoría</th>
-                <th>Grupo Laboratorio</th>
-                <th>Profesor</th>
-                <th>Cupos</th>
-                <th>Acción</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for lab in laboratorios %}
-            <tr>
-                <td>{{ lab.grupo_teoria.curso.nombre }}</td>
-                <td>{{ lab.grupo_teoria.turno }}</td>
-                <td>{{ lab.grupo }}</td>
-                <td>
-                    {% if lab.profesor %}
-                        {{ lab.profesor.nombre }}
-                    {% else %}
-                        Sin asignar
-                    {% endif %}
-                </td>
-                <td>
-                    <form method="POST" style="display:inline;">
+                        <div class="resumen-item">
+                            <span class="resumen-valor">
+                                {{ laboratorios_sin_profesor|default:0 }}
+                            </span>
+                            <span class="resumen-etiqueta">Sin Profesor</span>
+                        </div>
+                    </div>
+                    
+                    <form method="POST">
                         {% csrf_token %}
-                        <input type="hidden" name="lab_id" value="{{ lab.id }}">
-                        <input type="number" name="cupos" value="{{ lab.cupos }}" min="0">
-                </td>
-                <td>
-                        <button type="submit" name="actualizar_cupos">Actualizar</button>
+                        <button type="submit" name="descargar_excel" class="btn-excel">
+                            <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                            </svg>
+                            Descargar Excel
+                        </button>
                     </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Curso</th>
+                                <th>Grupo Teoría</th>
+                                <th>Grupo Laboratorio</th>
+                                <th>Profesor</th>
+                                <th>Cupos</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lab in laboratorios %}
+                            <tr>
+                                <td class="col-curso">{{ lab.grupo_teoria.curso.nombre }}</td>
+                                <td>{{ lab.grupo_teoria.turno }}</td>
+                                <td>
+                                    <strong>Grupo {{ lab.grupo }}</strong>
+                                    {% if not lab.profesor %}
+                                    <span class="estado-laboratorio estado-sin-profesor">
+                                        <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                                        </svg>
+                                        Sin profesor
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-profesor">
+                                    {% if lab.profesor %}
+                                        {{ lab.profesor.nombre }}
+                                        <span class="estado-laboratorio estado-activo">
+                                            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                                            </svg>
+                                            Asignado
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--color-gris-oscuro);">Sin asignar</span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-cupos">
+                                    <form method="POST" class="form-cupos" onsubmit="return confirmarActualizacion(this)">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="lab_id" value="{{ lab.id }}">
+                                        <input type="number" 
+                                               name="cupos" 
+                                               value="{{ lab.cupos }}" 
+                                               min="0" 
+                                               class="input-cupos"
+                                               onchange="validarCupos(this)">
+                                </td>
+                                <td>
+                                        <button type="submit" name="actualizar_cupos" class="btn-actualizar">
+                                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
+                                                <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                                                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                                            </svg>
+                                            Actualizar
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr class="empty-row">
+                                <td colspan="6">
+                                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16" style="margin-bottom: 10px;">
+                                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                                    </svg>
+                                    <p>No hay laboratorios disponibles.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 25px; padding: 15px; background-color: var(--color-guinda-suave); border-radius: 8px; font-size: 0.9rem;">
+                    <h4 style="color: var(--color-guinda); margin-bottom: 10px;">💡 Instrucciones:</h4>
+                    <ul style="list-style-type: none; padding-left: 0;">
+                        <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span style="color: var(--color-exito); font-weight: bold;">•</span>
+                            <span>Para modificar los cupos de un laboratorio, ingrese el nuevo valor y haga clic en "Actualizar".</span>
+                        </li>
+                        <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span style="color: var(--color-advertencia); font-weight: bold;">•</span>
+                            <span>Los laboratorios sin profesor asignado se muestran con un indicador amarillo.</span>
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: var(--color-info); font-weight: bold;">•</span>
+                            <span>Puede descargar un reporte en Excel con toda la información haciendo clic en "Descargar Excel".</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>Sistema de Gestión de Laboratorios &copy; {% now "Y" %}</p>
+            <p>Total de laboratorios registrados: <strong>{{ laboratorios|length }}</strong></p>
+        </footer>
+    </div>
 </body>
 </html>
