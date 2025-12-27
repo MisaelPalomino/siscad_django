@@ -6,3 +6,4 @@ django-extensions
 pydot
 graphviz
 python-dotenv
+.
