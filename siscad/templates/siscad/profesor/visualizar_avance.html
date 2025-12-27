@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html>
+{% extends 'siscad/profesor/dashboard_profesor.html' %}
+{% block title %}Registrar Asistencia{% endblock %}
+{% block perfil_content %}
 <head>
     <title>Avance de Cursos</title>
     <style>
@@ -18,7 +19,6 @@
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
             background-color: var(--color-gris);
         }
         
@@ -459,3 +459,4 @@
     </script>
 </body>
 </html>
+{% endblock %}

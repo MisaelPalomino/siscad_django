@@ -1,0 +1,168 @@
+<!-- templates/menu_base.html -->
+{% extends 'siscad/base.html' %}
+{% block navbar_content %}
+<div class="user-info">
+    <div class="user-avatar">
+        <i class="fas fa-user"></i>
+    </div>
+    <div>
+        <p style="font-size: 0.9rem;">{% block user_role %}Usuario{% endblock %}</p>
+        <p style="font-weight: bold;">{{ request.user.username }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .menu-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .menu-header {
+        text-align: center;
+        margin-bottom: 3rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, var(--guinda), var(--guinda-claro));
+        color: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(128, 0, 32, 0.2);
+    }
+    
+    .menu-header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .menu-header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+    
+    .menu-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+    }
+    
+    .menu-card {
+        background: var(--blanco);
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .menu-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 35px rgba(128, 0, 32, 0.15);
+        border-color: var(--guinda-suave);
+    }
+    
+    .menu-card-header {
+        background: linear-gradient(135deg, var(--guinda), var(--guinda-oscuro));
+        color: white;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .menu-card-icon {
+        width: 50px;
+        height: 50px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    
+    .menu-card-body {
+        padding: 1.5rem;
+    }
+    
+    .menu-card-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--guinda);
+        margin-bottom: 1rem;
+    }
+    
+    .menu-card-description {
+        color: var(--gris-oscuro);
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    
+    .menu-button {
+        display: block;
+        background: var(--guinda);
+        color: white;
+        text-align: center;
+        padding: 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .menu-button:hover {
+        background: var(--guinda-oscuro);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(128, 0, 32, 0.2);
+    }
+    
+    .menu-button i {
+        margin-right: 8px;
+    }
+    
+    .logout-section {
+        text-align: center;
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 2px solid var(--guinda-suave);
+    }
+    
+    .logout-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: transparent;
+        color: var(--guinda);
+        border: 2px solid var(--guinda);
+        padding: 12px 30px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .logout-button:hover {
+        background: var(--guinda);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="menu-wrapper">
+    <div class="menu-header">
+        <h1><i class="fas {% block menu_icon %}{% endblock %}"></i> {% block menu_title %}Panel{% endblock %}</h1>
+        <p>{% block menu_description %}Bienvenido al sistema{% endblock %}</p>
+    </div>
+    
+    <div class="menu-grid">
+        {% block menu_items %}
+        {% endblock %}
+    </div>
+    
+    <div class="logout-section">
+        <a href="{% url 'logout' %}" class="logout-button">
+            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+        </a>
+    </div>
+</div>
+{% endblock %}

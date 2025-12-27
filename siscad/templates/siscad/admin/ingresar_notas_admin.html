@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends 'siscad/admin/dashboard_admin.html' %}
+{% block title %}Cancelar - Reserva{% endblock %}
+{% block perfil_content %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -48,13 +49,7 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header">
-        <div class="container">
-            <h1>Ingresar Notas - Administrador</h1>
-            <a href="{% url 'inicio_administrador' %}" class="btn btn-light btn-sm">Volver al Dashboard</a>
-        </div>
-    </div>
+
 
     <div class="container">
         <!-- Mensajes -->
@@ -624,3 +619,4 @@
     </script>
 </body>
 </html>
+{% endblock %}

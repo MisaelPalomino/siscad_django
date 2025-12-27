@@ -1,56 +1,88 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Menú Secretaría</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f9f9f9;
-        padding: 20px;
-      }
-      h1 {
-        color: #333;
-      }
-      .menu {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        max-width: 400px;
-        margin: auto;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      }
-      .menu a {
-        display: block;
-        margin: 10px 0;
-        padding: 10px;
-        text-decoration: none;
-        background: #007bff;
-        color: white;
-        text-align: center;
-        border-radius: 5px;
-      }
-      .menu a:hover {
-        background: #0056b3;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="menu">
-      <h1>Panel de Secretaría</h1>
-      <a href="{% url 'insertar_alumnos_excel' %}">
-        Insertar Alumnos desde Excel</a
-      >
-      <a href="{% url 'listar_alumnos_grupo_teoria' %}">
-        Listar Alumnos por Grupo de Teoría</a
-      >
-      <a href="{% url 'listar_grupos_laboratorio' %}">
-        Gestión de Laboratorios</a
-      >
-      <a href="{% url 'listar_alumnos_grupo_laboratorio' %}">
-        Listar Alumnos por Laboratorio</a>
-      <a href="{% url 'visualizar_horarios_aulas' %}">
-        Visualizar Horarios de las Aulas</a>
-      <a href="{% url 'logout' %}"> Cerrar sesión</a>
+{% extends 'siscad/menu_base.html' %}
+
+{% block title %}Menú Secretaría{% endblock %}
+{% block user_role %}Secretaría{% endblock %}
+{% block menu_title %}Panel de Secretaría{% endblock %}
+{% block menu_description %}Gestión de alumnos, laboratorios y horarios{% endblock %}
+
+{% block menu_items %}
+    <!-- Tarjeta 1 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-file-excel"></i>
+            </div>
+            <h3>Insertar Alumnos Excel</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Importa alumnos desde archivos Excel de manera masiva</p>
+            <a href="{% url 'insertar_alumnos_excel' %}" class="menu-button">
+                <i class="fas fa-upload"></i> Acceder
+            </a>
+        </div>
     </div>
-  </body>
-</html>
+    
+    <!-- Tarjeta 2 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <h3>Alumnos por Grupo Teoría</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Visualiza alumnos organizados por grupo de teoría</p>
+            <a href="{% url 'listar_alumnos_grupo_teoria' %}" class="menu-button">
+                <i class="fas fa-list"></i> Ver Listado
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 3 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-flask"></i>
+            </div>
+            <h3>Gestión de Laboratorios</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Administra los grupos de laboratorio disponibles</p>
+            <a href="{% url 'listar_grupos_laboratorio' %}" class="menu-button">
+                <i class="fas fa-cogs"></i> Gestionar
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 4 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+            <h3>Alumnos por Laboratorio</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Consulta alumnos asignados a laboratorios</p>
+            <a href="{% url 'listar_alumnos_grupo_laboratorio' %}" class="menu-button">
+                <i class="fas fa-search"></i> Consultar
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 5 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <h3>Horarios de Aulas</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Visualiza y gestiona horarios de aulas</p>
+            <a href="{% url 'visualizar_horarios_aulas' %}" class="menu-button">
+                <i class="fas fa-clock"></i> Ver Horarios
+            </a>
+        </div>
+    </div>
+{% endblock %}

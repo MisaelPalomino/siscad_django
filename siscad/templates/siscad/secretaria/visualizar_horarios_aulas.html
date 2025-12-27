@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends 'siscad/secretaria/dashboard_secretaria.html' %}
+{% block title %}Horarios por aula - Secretaría{% endblock %}
+{% block perfil_content %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -297,19 +298,7 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1>📚 HORARIOS DE AULAS</h1>
-                    <p class="header-subtitle mb-0">Panel de Secretaria - Control Académico</p>
-                </div>
-                <a href="{% url 'inicio_secretaria' %}" class="btn btn-volver">
-                    <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
-                </a>
-            </div>
-        </div>
-    </div>
+ 
     
     <div class="container-fluid">
         
@@ -409,3 +398,4 @@
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+{% endblock %}

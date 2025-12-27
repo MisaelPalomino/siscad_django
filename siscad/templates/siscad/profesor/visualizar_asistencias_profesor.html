@@ -1,30 +1,24 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends 'siscad/profesor/dashboard_profesor.html' %}
+{% block title %}Registrar Asistencia{% endblock %}
+{% block perfil_content %}
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Asistencias - Profesor</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
             background-color: #f5f5f5;
         }
         
         .container {
-            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 20px;
         }
         
         .header {
             text-align: center;
             margin-bottom: 30px;
-            padding-bottom: 20px;
             border-bottom: 2px solid #e0e0e0;
         }
         
@@ -178,13 +172,11 @@
             <p><strong>Email:</strong> {{ profesor.email }} | <strong>Código:</strong> {{ profesor.codigo }}</p>
         </div>
 
-        <!-- Información de Reservas -->
         <div class="reserva-info">
             <h4> Información de Reservas</h4>
             <p>Reservas disponibles: <strong>{{ profesor.cantidad_reservas }}</strong></p>
         </div>
 
-        <!-- Selector de Curso -->
         <div class="curso-selector">
             <h3> Seleccionar Curso</h3>
             <p>Elige un curso para ver tus asistencias:</p>
@@ -296,12 +288,6 @@
                 <p>Elige uno de los cursos que enseñas para ver las asistencias.</p>
             </div>
         {% endif %}
-
-        <div style="margin-top: 30px; text-align: center;">
-            <a href="{% url 'inicio_profesor' %}" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                ← Volver al Dashboard
-            </a>
-        </div>
     </div>
 </body>
-</html>
+{% endblock %}

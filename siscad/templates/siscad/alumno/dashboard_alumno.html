@@ -1,0 +1,52 @@
+<!-- templates/siscad/alumno/base.html -->
+{% extends 'siscad/dashboard_base.html' %}
+
+{% block perfil_tipo %}Alumno{% endblock %}
+{% block sidebar_icon %}fa-user-graduate{% endblock %}
+{% block sidebar_title %}Alumno{% endblock %}
+
+{% block sidebar_content %}
+<div class="nav-section">
+    <div class="nav-section-title">Principal</div>
+    <a href="{% url 'inicio_alumno' %}" class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Menú Principal</span>
+    </a>
+</div>
+
+<div class="nav-section">
+    <div class="nav-section-title">Horario y Cursos</div>
+    <a href="{% url 'visualizar_horario_alumno' %}" class="nav-item">
+        <i class="fas fa-calendar-alt"></i>
+        <span>Mi Horario</span>
+    </a>
+    <a href="{% url 'visualizar_notas' %}" class="nav-item">
+        <i class="fas fa-graduation-cap"></i>
+        <span>Mis Notas</span>
+    </a>
+    <a href="{% url 'matricula_laboratorio' %}" class="nav-item">
+        <i class="fas fa-flask"></i>
+        <span>Matrícula Laboratorio</span>
+    </a>
+</div>
+
+<div class="nav-section">
+    <div class="nav-section-title">Asistencia y Progreso</div>
+    <a href="{% url 'visualizar_asistencias_alumno' %}" class="nav-item">
+        <i class="fas fa-clipboard-check"></i>
+        <span>Mis Asistencias</span>
+    </a>
+    <a href="{% url 'visualizar_progreso_estudiante' %}" class="nav-item">
+        <i class="fas fa-chart-line"></i>
+        <span>Avance de Cursos</span>
+    </a>
+</div>
+
+<div class="nav-section">
+    <div class="nav-section-title">Sesión</div>
+    <a href="{% url 'logout' %}" class="nav-item">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Cerrar Sesión</span>
+    </a>
+</div>
+{% endblock %}

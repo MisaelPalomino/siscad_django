@@ -1,4 +1,5 @@
 from ..comunes.imports import *
+
 def listar_grupos_laboratorio(request):
     laboratorios = GrupoLaboratorio.objects.select_related(
         "grupo_teoria", "grupo_teoria__curso", "profesor"

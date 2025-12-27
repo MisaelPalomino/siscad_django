@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends 'siscad/profesor/dashboard_profesor.html' %}
+{% block title %}Registrar Asistencia{% endblock %}
+{% block perfil_content %}
 <head>
     <meta charset="UTF-8">
     <title>Reservar Aula</title>
@@ -164,11 +165,9 @@
             <p>No tienes reservas activas.</p>
         {% endif %}
     </div>
-    <div style="margin-top: 30px; text-align: center;">
-            <a href="{% url 'inicio_profesor' %}" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                ← Volver al Dashboard
-            </a>
-        </div>
+
 </div>
 </body>
 </html>
+{% endblock %}
+

@@ -1,57 +1,105 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Menú Alumno</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f9f9f9;
-        padding: 20px;
-      }
-      h1 {
-        color: #333;
-      }
-      .menu {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        max-width: 400px;
-        margin: auto;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      }
-      .menu a {
-        display: block;
-        margin: 10px 0;
-        padding: 10px;
-        text-decoration: none;
-        background: #007bff;
-        color: white;
-        text-align: center;
-        border-radius: 5px;
-      }
-      .menu a:hover {
-        background: #0056b3;
-      }
-      .user-info {
-        text-align: center;
-        margin-bottom: 20px;
-        color: #666;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="menu">
-      <h1>Panel del Alumno</h1>
-      <div class="user-info">
-        <p>Bienvenido: <strong>{{ nombre }}</strong></p>
-        <p>Rol: <strong>{{ rol }}</strong></p>
-      </div>
-      <a href="{% url 'visualizar_notas' %}"> Visualizar Mis Notas </a>
-      <a href="{% url 'visualizar_horario_alumno' %}"> Visualizar Mi Horaio </a>
-      <a href="{% url 'matricula_laboratorio' %}"> Matricula Laboratorio </a>
-      <a href="{% url 'visualizar_asistencias_alumno' %}"> Ver mis asistencias </a>
-      <a href="{% url 'visualizar_progreso_estudiante' %}"> Ver avance de cursos </a>
-      <a href="{% url 'logout' %}">Cerrar sesión</a>
+<!-- templates/siscad/alumno/menu.html -->
+{% extends 'siscad/menu_base.html' %}
+
+{% block title %}Menú Alumno{% endblock %}
+{% block user_role %}Alumno{% endblock %}
+{% block menu_title %}Panel del Alumno{% endblock %}
+{% block menu_description %}Consulta tus notas, horario, asistencias y avance académico{% endblock %}
+
+{% block menu_items %}
+    <!-- Tarjeta 1 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h3>Visualizar Mis Notas</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Consulta tus calificaciones y promedios por curso</p>
+            <a href="{% url 'visualizar_notas' %}" class="menu-button">
+                <i class="fas fa-chart-bar"></i> Ver Notas
+            </a>
+        </div>
     </div>
-  </body>
-</html>
+    
+    <!-- Tarjeta 2 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <h3>Visualizar Mi Horario</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Visualiza tu horario de clases semanal</p>
+            <a href="{% url 'visualizar_horario_alumno' %}" class="menu-button">
+                <i class="fas fa-clock"></i> Ver Horario
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 3 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-flask"></i>
+            </div>
+            <h3>Matrícula Laboratorio</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Realiza tu matrícula en grupos de laboratorio</p>
+            <a href="{% url 'matricula_laboratorio' %}" class="menu-button">
+                <i class="fas fa-user-plus"></i> Matricularse
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 4 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-clipboard-check"></i>
+            </div>
+            <h3>Ver mis asistencias</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Consulta tu registro de asistencia por curso</p>
+            <a href="{% url 'visualizar_asistencias_alumno' %}" class="menu-button">
+                <i class="fas fa-history"></i> Ver Asistencias
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 5 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>Ver avance de cursos</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Visualiza tu progreso en cada curso</p>
+            <a href="{% url 'visualizar_progreso_estudiante' %}" class="menu-button">
+                <i class="fas fa-tasks"></i> Ver Avance
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 6: Cerrar sesión -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <h3>Cerrar Sesión</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Salir de manera segura del sistema</p>
+            <a href="{% url 'logout' %}" class="menu-button" style="background: #dc3545;">
+                <i class="fas fa-power-off"></i> Cerrar Sesión
+            </a>
+        </div>
+    </div>
+{% endblock %}

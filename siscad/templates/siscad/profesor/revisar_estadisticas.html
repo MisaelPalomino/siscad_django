@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends 'siscad/profesor/dashboard_profesor.html' %}
+{% block title %}Registrar Asistencia{% endblock %}
+{% block perfil_content %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -37,76 +38,12 @@
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="bi bi-journal-bookmark-fill"></i>
-                Sistema Académico
-            </a>
-            <div class="navbar-nav ms-auto">
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-person-circle"></i>
-                        {{ request.user.username }}
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> Mi Perfil</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{% url 'admin:logout' %}"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
+    
 
     <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar d-md-block">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="bi bi-speedometer2"></i>
-                                Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'ingresar_notas' %}">
-                                <i class="bi bi-pencil-square"></i>
-                                Ingresar Notas
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="#">
-                                <i class="bi bi-graph-up"></i>
-                                Estadísticas
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="bi bi-list-check"></i>
-                                Mis Cursos
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="bi bi-calendar-event"></i>
-                                Horarios
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="bi bi-bar-chart-line"></i>
-                                Reportes
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 main-content">
+            <div class="col-md-12 col-lg-12 main-content">
                 <div class="container-fluid py-4">
                     <div class="row mb-4">
                         <div class="col-12">
@@ -815,11 +752,7 @@
             </div>
         </div>
     </div>
-    <div style="margin-top: 30px; text-align: center;">
-            <a href="{% url 'inicio_profesor' %}" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                ← Volver al Dashboard
-            </a>
-        </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     {% if estadisticas_generales and estadisticas_generales.total_con_nota > 0 %}
@@ -953,3 +886,4 @@
     {% endif %}
 </body>
 </html>
+{% endblock %}

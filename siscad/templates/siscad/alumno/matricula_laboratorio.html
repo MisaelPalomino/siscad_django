@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends 'siscad/alumno/dashboard_alumno.html' %}
+{% block title %}Cancelar - Reserva{% endblock %}
+{% block perfil_content %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,6 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
             background-color: #f5f5f5;
         }
         
@@ -144,7 +144,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔬 Matrícula de Laboratorios</h1>
+            <h1> Matrícula de Laboratorios</h1>
         </div>
         
         <div class="student-info">
@@ -241,11 +241,6 @@
         </div>
         {% endif %}
 
-        <div style="margin-top: 30px; text-align: center;">
-            <a href="{% url 'inicio_alumno' %}" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                ← Volver al Dashboard
-            </a>
-        </div>
     </div>
 
     <script>
@@ -267,3 +262,4 @@
     </script>
 </body>
 </html>
+{% endblock %}

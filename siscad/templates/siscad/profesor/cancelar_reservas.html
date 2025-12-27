@@ -1,10 +1,12 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends 'siscad/profesor/dashboard_profesor.html' %}
+{% block title %}Cancelar - Reserva{% endblock %}
+{% block perfil_content %}
+
 <head>
     <meta charset="UTF-8">
     <title>Cancelar Reservas</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0;  }
         h2 { color: #333; }
         table { width: 100%; border-collapse: collapse; background: #fff; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
@@ -64,10 +66,6 @@
     {% else %}
         <p>No tienes reservas activas.</p>
     {% endif %}
-    <div style="margin-top: 30px; text-align: center;">
-            <a href="{% url 'inicio_profesor' %}" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                ← Volver al Dashboard
-            </a>
-        </div>
 </body>
 </html>
+{% endblock %}

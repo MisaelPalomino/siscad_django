@@ -1,69 +1,264 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Menú Administrador</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f9f9f9;
-        padding: 20px;
-      }
-      h1 {
-        color: #333;
-      }
-      .menu {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        max-width: 400px;
-        margin: auto;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      }
-      .menu a {
-        display: block;
-        margin: 10px 0;
-        padding: 10px;
-        text-decoration: none;
-        background: #007bff;
-        color: white;
-        text-align: center;
-        border-radius: 5px;
-      }
-      .menu a:hover {
-        background: #0056b3;
-      }
-      .user-info {
-        text-align: center;
-        margin-bottom: 20px;
-        color: #666;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="menu">
-      <h1>Panel del Administrador</h1>
-      <div class="user-info">
-        <p>Bienvenido: <strong>{{ nombre }}</strong></p>
-        <p>Rol: <strong>{{ rol }}</strong></p>
-      </div>
-      <a href="{% url 'registrar_asistencia_alumnos' %}"> Registrar Asistencia Alumno </a>
-      <a href="{% url 'registrar_asistencia_profesor' %}"> Registrar Asistencia Profesor </a>
-      <a href="{% url 'visualizar_matriculados_admin' %}"> Visualizar Matriculados Cursos </a>
-      <a href="{% url 'estadisticas_curso_admin' %}"> Estadisticas de un curso </a>
-      <a href="{% url 'notas_alumno_dni_admin' %}"> Visualizar notas de un Alumno</a> 
-      <a href="{% url 'reservar_aula_admin' %}"> Reservar Aula</a> 
-      <a href="{% url 'cancelar_reserva_admin' %}"> Cancelar reserva</a> 
-      <a href="{% url 'matricula_laboratorio_admin' %}"> Modificar Matricula Laboratorio</a> 
-      <a href="{% url 'visualizar_horarios_aulas_admin' %}"> Ver horario de las aulas</a> 
-      <a href="{% url 'reporte_asistencia_alumno_admin' %}"> Reporte Asistencia Alumno</a> 
-      <a href="{% url 'ingresar_notas_admin' %}"> Modificar/ingresar Notas</a> 
-      <a href="{% url 'subir_silabo_admin' %}"> Subir Silabo</a> 
-      <a href="{% url 'visualizar_avance_admin' %}"> Ver Progresos</a> 
-      <a href="{% url 'listar_grupos_laboratorio_admin' %}"> Aumentar Cupos Lab</a> 
-      <a href="{% url 'visualizar_horario_alumno_admin' %}"> Ver horario de un Alumno</a> 
-      <a href="{% url 'visualizar_horario_profesor_admin' %}"> Ver horario de un Profesor</a> 
-      <a href="{% url 'logout' %}">Cerrar sesión</a>
+<!-- templates/siscad/admin/menu.html -->
+{% extends 'siscad/menu_base.html' %}
 
+{% block title %}Menú Administrador{% endblock %}
+{% block user_role %}Administrador{% endblock %}
+{% block menu_title %}Panel del Administrador{% endblock %}
+{% block menu_description %}Gestión completa del sistema académico{% endblock %}
+
+{% block menu_items %}
+    <!-- Tarjeta 1 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <h3>Registrar Asistencia Alumno</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'registrar_asistencia_alumnos' %}" class="menu-button">
+                <i class="fas fa-user-graduate"></i> Registrar
+            </a>
+        </div>
     </div>
-  </body>
-</html>
+    
+    <!-- Tarjeta 2 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+            <h3>Registrar Asistencia Profesor</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'registrar_asistencia_profesor' %}" class="menu-button">
+                <i class="fas fa-user-tie"></i> Registrar
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 3 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <h3>Visualizar Matriculados Cursos</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'visualizar_matriculados_admin' %}" class="menu-button">
+                <i class="fas fa-list"></i> Ver Matriculados
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 4 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <h3>Estadísticas de un Curso</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'estadisticas_curso_admin' %}" class="menu-button">
+                <i class="fas fa-chart-pie"></i> Ver Estadísticas
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 5 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <h3>Visualizar Notas de un Alumno</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'notas_alumno_dni_admin' %}" class="menu-button">
+                <i class="fas fa-graduation-cap"></i> Buscar Notas
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 6 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-door-open"></i>
+            </div>
+            <h3>Reservar Aula</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'reservar_aula_admin' %}" class="menu-button">
+                <i class="fas fa-calendar-plus"></i> Nueva Reserva
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 7 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-calendar-times"></i>
+            </div>
+            <h3>Cancelar Reserva</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'cancelar_reserva_admin' %}" class="menu-button">
+                <i class="fas fa-times-circle"></i> Cancelar
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 8 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-flask"></i>
+            </div>
+            <h3>Modificar Matrícula Laboratorio</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'matricula_laboratorio_admin' %}" class="menu-button">
+                <i class="fas fa-edit"></i> Modificar
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 9 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <h3>Ver Horario de las Aulas</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'visualizar_horarios_aulas_admin' %}" class="menu-button">
+                <i class="fas fa-calendar-alt"></i> Ver Horarios
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 10 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <h3>Reporte Asistencia Alumno</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'reporte_asistencia_alumno_admin' %}" class="menu-button">
+                <i class="fas fa-clipboard-check"></i> Generar Reporte
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 11 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h3>Modificar/Ingresar Notas</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'ingresar_notas_admin' %}" class="menu-button">
+                <i class="fas fa-edit"></i> Ingresar Notas
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 12 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-book"></i>
+            </div>
+            <h3>Subir Sílabo</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'subir_silabo_admin' %}" class="menu-button">
+                <i class="fas fa-upload"></i> Subir Archivo
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 13 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>Ver Progresos</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'visualizar_avance_admin' %}" class="menu-button">
+                <i class="fas fa-tasks"></i> Ver Progresos
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 14 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <h3>Aumentar Cupos Lab</h3>
+        </div>
+        <div class="menu-card-body">
+          <a href="{% url 'listar_grupos_laboratorio_admin' %}" class="menu-button">
+                <i class="fas fa-users"></i> Aumentar Cupos
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 15 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+            <h3>Ver Horario de un Alumno</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'visualizar_horario_alumno_admin' %}" class="menu-button">
+                <i class="fas fa-calendar"></i> Ver Horario Alumno
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 16 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+            <h3>Ver Horario de un Profesor</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'visualizar_horario_profesor_admin' %}" class="menu-button">
+                <i class="fas fa-calendar"></i> Ver Horario Profesor
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 17: Cerrar sesión -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <h3>Cerrar Sesión</h3>
+        </div>
+        <div class="menu-card-body">
+            <a href="{% url 'logout' %}" class="menu-button" style="background: #dc3545;">
+                <i class="fas fa-power-off"></i> Cerrar Sesión
+            </a>
+        </div>
+    </div>
+{% endblock %}

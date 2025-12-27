@@ -1,0 +1,104 @@
+<!-- templates/siscad/admin/base.html -->
+{% extends 'siscad/dashboard_base.html' %}
+
+{% block perfil_tipo %}Administrador{% endblock %}
+{% block sidebar_icon %}fa-user-cog{% endblock %}
+{% block sidebar_title %}Administrador{% endblock %}
+
+{% block sidebar_content %}
+<div class="nav-section">
+    <div class="nav-section-title">Asistencias</div>
+    <a href="{% url 'registrar_asistencia_alumnos' %}" class="nav-item">
+        <i class="fas fa-user-check"></i>
+        <span>Reg. Asistencia Alumno</span>
+    </a>
+    <a href="{% url 'registrar_asistencia_profesor' %}" class="nav-item">
+        <i class="fas fa-chalkboard-teacher"></i>
+        <span>Reg. Asistencia Profesor</span>
+    </a>
+    <a href="{% url 'reporte_asistencia_alumno_admin' %}" class="nav-item">
+        <i class="fas fa-file-alt"></i>
+        <span>Reporte Asistencia</span>
+    </a>
+</div>
+
+<div class="nav-section">
+    <div class="nav-section-title">Matrículas</div>
+    <a href="{% url 'visualizar_matriculados_admin' %}" class="nav-item">
+        <i class="fas fa-users"></i>
+        <span>Ver Matriculados</span>
+    </a>
+    <a href="{% url 'matricula_laboratorio_admin' %}" class="nav-item">
+        <i class="fas fa-flask"></i>
+        <span>Mod. Matrícula Lab</span>
+    </a>
+    <a href="{% url 'listar_grupos_laboratorio_admin' %}" class="nav-item">
+        <i class="fas fa-plus-circle"></i>
+        <span>Aumentar Cupos Lab</span>
+    </a>
+</div>
+
+<div class="nav-section">
+    <div class="nav-section-title">Notas y Evaluación</div>
+    <a href="{% url 'notas_alumno_dni_admin' %}" class="nav-item">
+        <i class="fas fa-search"></i>
+        <span>Ver Notas Alumno</span>
+    </a>
+    <a href="{% url 'ingresar_notas_admin' %}" class="nav-item">
+        <i class="fas fa-graduation-cap"></i>
+        <span>Ingresar/Mod. Notas</span>
+    </a>
+    <a href="{% url 'estadisticas_curso_admin' %}" class="nav-item">
+        <i class="fas fa-chart-bar"></i>
+        <span>Estadísticas Curso</span>
+    </a>
+</div>
+
+<div class="nav-section">
+    <div class="nav-section-title">Horarios</div>
+    <a href="{% url 'visualizar_horarios_aulas_admin' %}" class="nav-item">
+        <i class="fas fa-clock"></i>
+        <span>Horarios Aulas</span>
+    </a>
+    <a href="{% url 'visualizar_horario_alumno_admin' %}" class="nav-item">
+        <i class="fas fa-user-graduate"></i>
+        <span>Horario Alumno</span>
+    </a>
+    <a href="{% url 'visualizar_horario_profesor_admin' %}" class="nav-item">
+        <i class="fas fa-chalkboard-teacher"></i>
+        <span>Horario Profesor</span>
+    </a>
+</div>
+
+<div class="nav-section">
+    <div class="nav-section-title">Aulas y Reservas</div>
+    <a href="{% url 'reservar_aula_admin' %}" class="nav-item">
+        <i class="fas fa-door-open"></i>
+        <span>Reservar Aula</span>
+    </a>
+    <a href="{% url 'cancelar_reserva_admin' %}" class="nav-item">
+        <i class="fas fa-calendar-times"></i>
+        <span>Cancelar Reserva</span>
+    </a>
+</div>
+
+<div class="nav-section">
+    <div class="nav-section-title">Documentos y Progreso</div>
+    <a href="{% url 'subir_silabo_admin' %}" class="nav-item">
+        <i class="fas fa-book"></i>
+        <span>Subir Sílabo</span>
+    </a>
+    <a href="{% url 'visualizar_avance_admin' %}" class="nav-item">
+        <i class="fas fa-chart-line"></i>
+        <span>Ver Progresos</span>
+    </a>
+</div>
+
+<div class="nav-section">
+    <div class="nav-section-title">Sesión</div>
+    <a href="{% url 'logout' %}" class="nav-item">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Cerrar Sesión</span>
+    </a>
+</div>
+{% endblock %} 

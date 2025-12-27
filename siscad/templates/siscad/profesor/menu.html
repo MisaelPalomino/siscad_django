@@ -1,62 +1,153 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Menú Profesor</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f9f9f9;
-        padding: 20px;
-      }
-      h1 {
-        color: #333;
-      }
-      .menu {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        max-width: 400px;
-        margin: auto;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      }
-      .menu a {
-        display: block;
-        margin: 10px 0;
-        padding: 10px;
-        text-decoration: none;
-        background: #007bff;
-        color: white;
-        text-align: center;
-        border-radius: 5px;
-      }
-      .menu a:hover {
-        background: #0056b3;
-      }
-      .user-info {
-        text-align: center;
-        margin-bottom: 20px;
-        color: #666;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="menu">
-      <h1>Panel del Profesor</h1>
-      <div class="user-info">
-        <p>Bienvenido: <strong>{{ nombre }}</strong></p>
-        <p>Rol: <strong>{{ rol }}</strong></p>
-      </div>
-      <a href="{% url 'visualizar_horario_profesor' %}"> Visualizar Mi Horaio </a>
-      <a href="{% url 'visualizar_asistencias_profesor' %}"> Visualizar Mis Asistencias </a>
-      <a href="{% url 'reservar_aula' %}"> Reservar Aula </a>
-      <a href="{% url 'ver_cancelar_reservas' %}">Ver / Cancelar mis reservas</a>
-      <a href="{% url 'registrar_asistencia' %}">Registrar Asistencia</a>
-      <a href="{% url 'revisar_estadisticas' %}">Revisar Estadisticas</a>
-      <a href="{% url 'ingresar_notas' %}">Ingresar notas</a>
-      <a href="{% url 'subir_silabo' %}">Subir Silabo</a>
-      <a href="{% url 'visualizar_avance' %}">Visualizar avance</a>
-      <a href="{% url 'logout' %}">Cerrar sesión</a>
+<!-- templates/siscad/profesor/menu.html -->
+{% extends 'siscad/menu_base.html' %}
 
+{% block title %}Menú Profesor{% endblock %}
+{% block user_role %}Profesor{% endblock %}
+{% block menu_title %}Panel del Profesor{% endblock %}
+{% block menu_description %}Gestión de clases, notas, asistencias y reservas{% endblock %}
+
+{% block menu_items %}
+    <!-- Tarjeta 1 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <h3>Mi Horario</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Visualiza tu horario de clases asignadas</p>
+            <a href="{% url 'visualizar_horario_profesor' %}" class="menu-button">
+                <i class="fas fa-clock"></i> Ver Horario
+            </a>
+        </div>
     </div>
-  </body>
-</html>
+    
+    <!-- Tarjeta 2 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-clipboard-check"></i>
+            </div>
+            <h3>Mis Asistencias</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Consulta tu registro de asistencias</p>
+            <a href="{% url 'visualizar_asistencias_profesor' %}" class="menu-button">
+                <i class="fas fa-history"></i> Ver Asistencias
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 3 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-door-open"></i>
+            </div>
+            <h3>Reservar Aula</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Reserva un aula para tus actividades académicas</p>
+            <a href="{% url 'reservar_aula' %}" class="menu-button">
+                <i class="fas fa-calendar-plus"></i> Nueva Reserva
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 4 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-calendar-times"></i>
+            </div>
+            <h3>Mis Reservas</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Gestiona o cancela tus reservas existentes</p>
+            <a href="{% url 'ver_cancelar_reservas' %}" class="menu-button">
+                <i class="fas fa-tasks"></i> Gestionar Reservas
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 5 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <h3>Registrar Asistencia</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Registra la asistencia de tus alumnos</p>
+            <a href="{% url 'registrar_asistencia' %}" class="menu-button">
+                <i class="fas fa-check-circle"></i> Registrar
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 6 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <h3>Estadísticas</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Revisa estadísticas de rendimiento y asistencia</p>
+            <a href="{% url 'revisar_estadisticas' %}" class="menu-button">
+                <i class="fas fa-chart-line"></i> Ver Estadísticas
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 7 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h3>Ingresar Notas</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Ingresa las calificaciones de tus alumnos</p>
+            <a href="{% url 'ingresar_notas' %}" class="menu-button">
+                <i class="fas fa-edit"></i> Ingresar Notas
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 8 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-book"></i>
+            </div>
+            <h3>Subir Sílabo</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Sube el sílabo de tus cursos</p>
+            <a href="{% url 'subir_silabo' %}" class="menu-button">
+                <i class="fas fa-upload"></i> Subir Archivo
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjeta 9 -->
+    <div class="menu-card">
+        <div class="menu-card-header">
+            <div class="menu-card-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>Visualizar Avance</h3>
+        </div>
+        <div class="menu-card-body">
+            <p class="menu-card-description">Visualiza el avance académico de tus alumnos</p>
+            <a href="{% url 'visualizar_avance' %}" class="menu-button">
+                <i class="fas fa-eye"></i> Ver Avance
+            </a>
+        </div>
+    </div>
+{% endblock %}

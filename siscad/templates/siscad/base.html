@@ -1,0 +1,115 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SISCAD{% endblock %}</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Estilos base comunes -->
+    <style>
+        :root {
+            --guinda: #800020;
+            --guinda-oscuro: #5a0017;
+            --guinda-claro: #a83232;
+            --guinda-suave: #f8e8e8;
+            --blanco: #ffffff;
+            --gris-claro: #f5f5f5;
+            --gris: #e0e0e0;
+            --gris-oscuro: #333;
+            --texto: #444;
+            --sombra: rgba(128, 0, 32, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--gris-claro);
+            color: var(--texto);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Navbar común */
+        .navbar {
+            background: linear-gradient(135deg, var(--guinda), var(--guinda-oscuro));
+            color: var(--blanco);
+            padding: 0 2rem;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 15px var(--sombra);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+            color: var(--blanco);
+        }
+        
+        .logo i {
+            font-size: 2rem;
+        }
+        
+        .logo h1 {
+            font-size: 1.5rem;
+        }
+        
+        /* Footer común */
+        .footer {
+            background: var(--guinda);
+            color: var(--blanco);
+            text-align: center;
+            padding: 1.5rem;
+            font-size: 0.9rem;
+            margin-top: auto;
+        }
+        
+        /* Contenedor principal común */
+        .main-container {
+            flex: 1;
+            padding: 2rem;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar común a todos -->
+    <nav class="navbar">
+        <a href="#" class="logo">
+            <i class="fas "></i>
+            <h1>.                    SISCAD</h1>
+        </a>
+        
+        {% block navbar_content %}
+        <!-- Aquí cada perfil pondrá su contenido específico -->
+        {% endblock %}
+    </nav>
+    
+    <!-- Contenido principal -->
+    <main class="main-container">
+        {% block content %}
+        {% endblock %}
+    </main>
+    
+    <!-- Footer común -->
+    <footer class="footer">
+        <p>Sistema de Gestión Académica &copy; 2024</p>
+    </footer>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

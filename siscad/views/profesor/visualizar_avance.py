@@ -270,5 +270,4 @@ def determinar_turno_laboratorio(grupo_lab):
     elif grupo_lab in ["B", "D"]:
         return "B"
     else:
-        # Por defecto, asumir turno A
         return "A"

@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends 'siscad/admin/dashboard_admin.html' %}
+{% block title %}Cancelar - Reserva{% endblock %}
+{% block perfil_content %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,12 +30,7 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="container">
-            <h1>Cancelar Reservas - Administrador</h1>
-            <a href="{% url 'inicio_administrador' %}" class="btn btn-light btn-sm">Volver al Dashboard</a>
-        </div>
-    </div>
+    
 
     <div class="container">
         {% if messages %}
@@ -162,3 +158,4 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+{% endblock %}
