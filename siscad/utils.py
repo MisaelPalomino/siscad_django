@@ -6,6 +6,9 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_time
 from django.db.models import Q, Exists, OuterRef
+import random
+from collections import Counter
+import math
 
 from .models import (
     Alumno,
@@ -1909,3 +1912,221 @@ def generar_administrador_unsa():
 
     except Exception as e:
         print(f" Error al crear administrador: {e}")
+
+
+def generar_notas_semestre_6():
+    """
+    Genera/modifica notas para cursos del semestre 6
+    para periodos 1 y 2 de tipo continua y parcial
+    """
+
+    cursos_semestre_6 = Curso.objects.filter(semestre=6)
+
+    if not cursos_semestre_6.exists():
+        print("No se encontraron cursos del semestre 6")
+        return
+
+    alumnos_semestre_6 = Alumno.objects.filter(semestre_asignado=6)
+
+    if not alumnos_semestre_6.exists():
+        print("No se encontraron alumnos del semestre 6")
+        return
+
+    # Tipos de notas a generar/modificar
+    tipos_notas = ["C", "P"]  # Continua y Parcial
+    periodos = [1, 2]
+
+    notas_generadas = 0
+    notas_actualizadas = 0
+
+    with transaction.atomic():
+        for alumno in alumnos_semestre_6:
+            for curso in cursos_semestre_6:
+                for periodo in periodos:
+                    for tipo in tipos_notas:
+                        # Verificar si ya existe una nota para este alumno, curso, periodo y tipo
+                        nota_existente = Nota.objects.filter(
+                            alumno=alumno, curso=curso, periodo=periodo, tipo=tipo
+                        ).first()
+
+                        # Generar nota aleatoria con distribución específica
+                        # 2/3 de probabilidad de que esté entre 11 y 20
+                        # 1/3 de probabilidad de que esté entre 0 y 10
+                        if random.random() < 0.6667:  # 2/3 de probabilidad
+                            nota_valor = random.uniform(11, 20)
+                        else:  # 1/3 de probabilidad
+                            nota_valor = random.uniform(0, 10)
+
+                        nota_valor = round(nota_valor, 0)
+
+                        peso = 0
+                        if tipo == "C":  # Continua
+                            if periodo == 1:
+                                peso = (
+                                    curso.peso_continua_1
+                                    if curso.peso_continua_1
+                                    else 10
+                                )
+                            elif periodo == 2:
+                                peso = (
+                                    curso.peso_continua_2
+                                    if curso.peso_continua_2
+                                    else 10
+                                )
+                            elif periodo == 3:
+                                peso = (
+                                    curso.peso_continua_3
+                                    if curso.peso_continua_3
+                                    else 10
+                                )
+                        elif tipo == "P":  # Parcial
+                            if periodo == 1:
+                                peso = (
+                                    curso.peso_parcial_1 if curso.peso_parcial_1 else 20
+                                )
+                            elif periodo == 2:
+                                peso = (
+                                    curso.peso_parcial_2 if curso.peso_parcial_2 else 20
+                                )
+                            elif periodo == 3:
+                                peso = (
+                                    curso.peso_parcial_3 if curso.peso_parcial_3 else 20
+                                )
+
+                        if nota_existente:
+                            nota_existente.valor = nota_valor
+                            nota_existente.peso = peso
+                            nota_existente.save()
+                            notas_actualizadas += 1
+                            print(
+                                f"✓ Nota actualizada: {alumno.nombre} - {curso.nombre} - Periodo {periodo} - {tipo}: {nota_valor}"
+                            )
+
+    print("\n" + "=" * 60)
+    print(f"RESUMEN DE LA OPERACIÓN:")
+    print(f"Cursos del semestre 6 procesados: {cursos_semestre_6.count()}")
+    print(f"Alumnos del semestre 6 procesados: {alumnos_semestre_6.count()}")
+    print(f"Notas generadas: {notas_generadas}")
+    print(f"Notas actualizadas: {notas_actualizadas}")
+    print(f"Total de notas procesadas: {notas_generadas + notas_actualizadas}")
+    print("=" * 60)
+
+
+# Función adicional para ver estadísticas de las notas generadas
+def estadisticas_notas_semestre_6():
+    """
+    Muestra estadísticas de las notas del semestre 6
+    """
+
+    # Obtener cursos del semestre 6
+    cursos_semestre_6 = Curso.objects.filter(semestre=6)
+    cursos_ids = cursos_semestre_6.values_list("id", flat=True)
+
+    # Obtener todas las notas del semestre 6 para periodos 1 y 2
+    notas_semestre_6 = Nota.objects.filter(curso_id__in=cursos_ids, periodo__in=[1, 2])
+
+    total_notas = notas_semestre_6.count()
+
+    if total_notas == 0:
+        print("No hay notas del semestre 6 para periodos 1 y 2")
+        return
+
+    # Calcular estadísticas
+    notas_valores = [nota.valor for nota in notas_semestre_6 if nota.valor is not None]
+
+    if notas_valores:
+        promedio = sum(notas_valores) / len(notas_valores)
+        aprobados = sum(1 for nota in notas_valores if nota >= 13)
+        desaprobados = sum(1 for nota in notas_valores if nota < 13)
+        rango_11_20 = sum(1 for nota in notas_valores if 11 <= nota <= 20)
+        rango_0_10 = sum(1 for nota in notas_valores if 0 <= nota <= 10)
+
+        print("\n" + "=" * 60)
+        print("ESTADÍSTICAS DE NOTAS - SEMESTRE 6 (Periodos 1 y 2)")
+        print("=" * 60)
+        print(f"Total de notas: {total_notas}")
+        print(f"Promedio general: {promedio:.2f}")
+        print(f"Aprobados (≥13): {aprobados} ({aprobados / total_notas * 100:.1f}%)")
+        print(
+            f"Desaprobados (<13): {desaprobados} ({desaprobados / total_notas * 100:.1f}%)"
+        )
+        print(
+            f"Notas entre 11-20: {rango_11_20} ({rango_11_20 / total_notas * 100:.1f}%)"
+        )
+        print(f"Notas entre 0-10: {rango_0_10} ({rango_0_10 / total_notas * 100:.1f}%)")
+
+        for tipo_nombre, tipo_codigo in [("Continua", "C"), ("Parcial", "P")]:
+            notas_tipo = notas_semestre_6.filter(tipo=tipo_codigo)
+            total_tipo = notas_tipo.count()
+            if total_tipo > 0:
+                valores_tipo = [
+                    nota.valor for nota in notas_tipo if nota.valor is not None
+                ]
+                if valores_tipo:
+                    promedio_tipo = sum(valores_tipo) / len(valores_tipo)
+                    print(f"\n{tipo_nombre}:")
+                    print(f"  Total: {total_tipo}")
+                    print(f"  Promedio: {promedio_tipo:.2f}")
+                    print(f"  Aprobados: {sum(1 for v in valores_tipo if v >= 13)}")
+                    print(
+                        f"  En rango 11-20: {sum(1 for v in valores_tipo if 11 <= v <= 20)} ({sum(1 for v in valores_tipo if 11 <= v <= 20) / total_tipo * 100:.1f}%)"
+                    )
+
+
+def asignar_semestres_estrategia(estrategia="comun"):
+    print(f"Asignando semestres usando estrategia: {estrategia}")
+
+    resultados = {"total": 0, "actualizados": 0, "sin_matriculas": 0, "con_error": 0}
+
+    with transaction.atomic():
+        alumnos = Alumno.objects.all()
+        resultados["total"] = alumnos.count()
+
+        for alumno in alumnos:
+            try:
+                matriculas = MatriculaCurso.objects.filter(alumno=alumno)
+
+                if not matriculas.exists():
+                    resultados["sin_matriculas"] += 1
+                    continue
+
+                # Obtener todos los semestres de los cursos
+                semestres = [matricula.curso.semestre for matricula in matriculas]
+
+                if estrategia == "comun":
+                    conteo = Counter(semestres)
+                    nuevo_semestre = conteo.most_common(1)[0][0]
+
+                elif estrategia == "promedio":
+                    # Promedio redondeado
+                    promedio = sum(semestres) / len(semestres)
+                    nuevo_semestre = round(promedio)
+
+                elif estrategia == "maximo":
+                    # Semestre más alto
+                    nuevo_semestre = max(semestres)
+
+                else:
+                    print(f"Estrategia '{estrategia}' no válida")
+                    return
+
+                if nuevo_semestre < 1:
+                    nuevo_semestre = 1
+                elif nuevo_semestre > 10:
+                    nuevo_semestre = 10
+
+                if alumno.semestre_asignado != nuevo_semestre:
+                    alumno.semestre_asignado = nuevo_semestre
+                    alumno.save(update_fields=["semestre_asignado"])
+                    resultados["actualizados"] += 1
+
+            except Exception as e:
+                resultados["con_error"] += 1
+                print(f"Error con {alumno.nombre}: {str(e)}")
+
+    # Mostrar resultados
+    print("\nResultados:")
+    for key, value in resultados.items():
+        print(f"{key}: {value}")
+
+    return resultados
